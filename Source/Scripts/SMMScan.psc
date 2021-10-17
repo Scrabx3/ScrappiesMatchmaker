@@ -1,26 +1,54 @@
 Scriptname SMMScan extends Quest
 {Mainscript for Starting Animations}
-; --------------- Properties
+
 SMMPlayer Property Player Auto
-Keyword Property threadKW Auto
+Keyword Property smThread Auto
 {Keyword for Story Manager to start Quests from}
 ; --------------- Variables
+SMMThread thisThread
 
 ; --------------- Code
 Event OnInit()
-	 Actor[] AliasArray = GetFilledActors()
+  If(!IsRunning())
+    return
+  ElseIf(!smThread.SendStoryEventAndWait())
+    GoToState("NoThread")
+  EndIf
+  RegisterForSingleUpdate(3)
+EndEvent
+State NoThread
+  Event OnUpdate()
+    Stop()
+  EndEvent
+EndState
+
+Function SetReady(SMMThread thread)
+  thisThread = thread
+EndFunction
+
+Event OnUpdate()
+  Actor[] ColAct = GetActors()
 EndEvent
 
-Actor[] Function GetFilledActors()
-	
+Actor[] Function GetActors()
+  int numAlias = GetNumAliases()
+  Actor[] ret = PapyrusUtil.ActorArray(numAlias, none)
+  int i = 0
+  While(i < numAlias)
+    ret[i] = (GetAlias(i) as ReferenceAlias).GetReference() as Actor
+    i += 1
+  EndWhile
+  return PapyrusUtil.RemoveActor(ret, none)
 EndFunction
 
 
-; -------------------------- Properties
+
+
+;/ -------------------------- Properties
 SexLabFramework Property SL Auto
 slaFrameworkScr Property Aroused Auto
-RMMPlayer Property PlayerScr Auto
-RMMMCM Property MCM auto
+SMMPlayer Property PlayerScr Auto
+SMMMCM Property MCM auto
 Actor Property PlayerRef Auto
 Faction Property currentfollowerfaction Auto
 Spell Property CalmSpell Auto
@@ -1087,5 +1115,6 @@ endFunction
 
 bool Function IsValidAg(Actor Target)
 endFunction
+/; 
 
 ; 70unit = 1m

@@ -1,80 +1,336 @@
 Scriptname SMMMCM extends SKI_ConfigBase Conditional
 
-; ----------------------- Properties
+SMMPlayer Property PlayerScr Auto
 ; ----------------------- Variables
+String[] classColors
 ; ---- General
 ; -- Scan
 bool Property bPaused = true Auto Hidden
-int Property iTickIntervall = 15 Auto Hidden
+int Property iTickIntervall = 20 Auto Hidden
 int Property iPauseKey = -1 Auto Hidden
-bool Property bAllowHostile = false Auto Hidden Conditional
-bool Property bAllowCreatures = false Auto Hidden Conditional
 ; ---- Locations
-int[] Property locationTable Auto Hidden
+String[] Property lProfiles Auto
 ; ---- Profiles
-string[] profiles
-string[] profileViewer
-int cVP = 0
+; Use JContainer to handle Profiles.. Most variables will be stored in .jsons
+String filePath = "Data\\SKSE\\SMM\\"
+String[] smmProfiles
+int smmProfileIndex
+;
+String[] lConsiderList
+String[] lConsiderListCrt
 
+; ===============================================================
+; =============================	STARTUP // UTILITY
+; ===============================================================
+int Function GetVersion()
+	return 1
+EndFunction
+
+Event OnVersionUpdate(int newVers)
+	;
+EndEvent
+
+Event OnConfigInit()
+	Initialize()
+EndEvent
 
 Function Initialize()
-	Pages = new string[4]
+	Pages = new string[3]
 	Pages[0] = "$SMM_General"
 	Pages[1] = "$SMM_Locs"
-	Pages[2] = " Profiles"
-	Pages[3] = " Filter"
-	; Menu Arrays
-	profiles = new string[4]
-	profiles[0] = "$SMM_profile_disabled"
-	profileViewer = new string[3]
-	int i = 0
-	While(i < profileViewer.length)
-		profiles[i + 1] = "$SMM_profile_" + i
-		profileViewer[i] = "$SMM_profile_" + i
-		i += 1
-	EndWhile
-	; Option Arrays
-	locationTable = Utility.CreateIntArray(12, 1)
+	Pages[2] = "$SMM_Profiles"
+
+	; Colors
+	classColors = new String[3]
+	classColors[0] = "<font color = '#ffff00'>" ; Player - Yellow
+	classColors[1] = "<font color = '#00c707'>" ; Follower - Green
+	classColors[2] = "<font color = '#f536ff'>"	; NPC - Magnetta
+
+	lConsiderList = new String[3]
+	lConsiderList[0] = "$SMM_considerEither" ; Either
+	lConsiderList[1] = "$SMM_considerFriendly" ; Friendly Only
+	lConsiderList[2] = "$SMM_considerHostile" ; Hostile Only
+
+	lConsiderListCrt = new String[3]
+	lConsiderListCrt[0] = "$SMM_considerEither" ; Either
+	lConsiderListCrt[1] = "$SMM_considerHuman" ; Human only
+	lConsiderListCrt[2] = "$SMM_considerCreature" ; Creature only
+
+	lProfiles = Utility.CreateStringArray(28, "$SMM_Disabled")
 EndFunction
+
+; ===============================================================
+; =============================	MENU
+; ===============================================================
+int jProfile
 
 Event OnPageReset(string Page)
   SetCursorFillMode(TOP_TO_BOTTOM)
   If(Page == "")
-    Page = "$SMM_General"
+    Page = "$SMM_Profiles"
+	ELseIf(jProfile != 0)
+		SaveJson()
   EndIf
   If(Page == "$SMM_General")
-		AddToggleOptionST("Enabled", "$SMM_Enabled", !Player.bPaused)
+		AddToggleOptionST("Enabled", "$SMM_Enabled", !bPaused)
 		AddKeyMapOptionST("PauseKey", "$SMM_PauseHotkey", iPauseKey)
 		AddSliderOptionST("TickInterval", "$SMM_Interval", iTickIntervall, "{0}s")
-		AddEmptyOption()
-		AddToggleOptionST("AllowHostile", "$SMM_AllowHostile", bAllowHostiles)
-		AddToggleOptionST("AllowCreatures", "$SMM_AllowCreature", bAllowCreatures)
 
 	ElseIf(Page == "$SMM_Locs")
+		CreateMenuProfiles(1)
 		SetCursorFillMode(LEFT_TO_RIGHT)
-		AddTextOptionST("LocReadMe", "$SMM_ReadMe", none)
 		AddEmptyOption()
-		AddHeaderOption("$SMM_LocHeader_0")
-		AddEmptyOption()
-		AddMenuOptionST("location_0", "$SMM_Locs_0", profiles[locationTable[0]])
-		AddHeaderOption("$SMM_LocHeader_1")
-		AddEmptyOption()
-		int i = 1
-		While(i < locationTable.length)
-			If(i == 7)
-				AddHeaderOption("$SMM_LocHeader_1")
-				AddEmptyOption()
-			EndIf
-			AddMenuOptionST("location_" + i, "$SMM_Locs_" + i, profiles[locationTable[i]])
+		AddTextOptionST("locProfileHelp", "$SMM_Help", none)
+		AddHeaderOption("")
+		AddHeaderOption("")
+		int i = 0
+		While(i < lProfiles.length)
+			AddMenuOptionST("locProfile_" + i, "$SMM_locProfile_" + i, lProfiles[i])
 			i += 1
 		EndWhile
 
 	ElseIf(Page == "$SMM_Profiles")
-
+		CreateMenuProfiles()
+		String thisProfile
+		If(!smmProfiles || smmProfileIndex >= smmProfiles.Length)
+			thisProfile = ""
+		else
+			thisProfile = smmProfiles[smmProfileIndex]
+		EndIf
+		jProfile = JValue.retain(JValue.readFromFile(filePath + thisProfile + ".json"), "SMM")
+		AddMenuOptionST("smmProfilesLoad", "$SMM_ProfileLoad", thisProfile)
+		AddInputOptionST("smmProfilesAdd", "$SMM_ProfileAdd", none)
+		SetCursorPosition(1)
+		AddTextOptionST("ProfilesHelp", "SMM_Help", none)
+		SetCursorPosition(4)
+		AddHeaderOption(thisProfile)
+		If(thisProfile == "")
+			AddTextOption("$SMM_NoProfileError", "", OPTION_FLAG_DISABLED)
+			return
+		EndIf
+		AddMenuOptionST("consider", "$SMM_Consider", lConsiderList[JMap.getInt(jProfile, "lConsider")])
+		AddMenuOptionST("considerCrt", "$SMM_ConsiderCrt", lConsiderListCrt[JMap.getInt(jProfile, "lConsiderCreature")])
+		AddToggleOptionST("considerPlayer", "$SMM_ConsiderPlayer", JMap.getInt(jProfile, "bConsiderPlayer"))
+		AddToggleOptionST("considerFollower", "$SMM_ConsiderFollower", JMap.getInt(jProfile, "bConsiderFollowers"))
+		SetCursorPosition(5)
+		AddHeaderOption("")
   EndIf
 endEvent
 
-; =============================================================
+Event OnConfigClose()
+	If(jProfile != 0)
+		SaveJson()
+	EndIf
+	JValue.releaseObjectsWithTag("SMM")
+EndEvent
+
+; ===============================================================
+; =============================	SELECTION STATES
+; ===============================================================
+Event OnSelectST()
+	String option = GetState()
+	If(option == "considerPlayer")
+		int val = JMap.getInt(jProfile, "bConsiderPlayer")
+		JMap.setInt(jProfile, "bConsiderPlayer", Math.abs(val - 1) as int)
+		SetToggleOptionValueST(JMap.getInt(jProfile, "bConsiderPlayer"))
+	ElseIf(option == "considerFollower")
+		int val = JMap.getInt(jProfile, "bConsiderFollowers")
+		JMap.setInt(jProfile, "bConsiderFollowers", Math.abs(val - 1) as int)
+		SetToggleOptionValueST(JMap.getInt(jProfile, "bConsiderFollowers"))
+	EndIf
+EndEvent
+
+; ===============================================================
+; =============================	SLIDER STATES
+; ===============================================================
+Event OnSliderOpenST()
+	String option = GetState()
+	If(option == "TickIntervall") ; General
+		SetSliderDialogStartValue(iTickIntervall)
+		SetSliderDialogDefaultValue(20)
+		SetSliderDialogRange(5, 300)
+		SetSliderDialogInterval(1)
+	EndIf
+EndEvent
+
+Event OnSliderAcceptST(Float afValue)
+	String option = GetState()
+	If(option == "TickIntervall") ; General
+		iTickIntervall = afValue as Int
+		SetSliderOptionValueST(iTickIntervall)
+	EndIf
+EndEvent
+
+; ===============================================================
+; =============================	MENU STATES
+; ===============================================================
+Event OnMenuOpenST()
+	String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+	If(option[0] == "consider") ; Profiles
+		SetMenuDialogStartIndex(JMap.getInt(jProfile, "lConsider"))
+		SetMenuDialogDefaultIndex(1)
+		SetMenuDialogOptions(lConsiderList)
+	ElseIf(option[0] == "considerCrt")
+		SetMenuDialogStartIndex(JMap.getInt(jProfile, "lConsiderCreature"))
+		SetMenuDialogDefaultIndex(1)
+		SetMenuDialogOptions(lConsiderListCrt)
+
+	ElseIf(option[0] == "locProfile")
+		int i = option[1] as int
+		int c = smmProfiles.Find(lProfiles[i])
+		SetMenuDialogStartIndex(c)
+		SetMenuDialogDefaultIndex(0)
+		SetMenuDialogOptions(smmProfiles)
+	EndIf
+EndEvent
+
+Event OnMenuAcceptST(Int aiIndex)
+	String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+	If(option[0] == "consider") ; Profiles
+		JMap.setInt(jProfile, "lConsider", aiIndex)
+		SetMenuOptionValueST(lConsiderList[aiIndex])
+	ElseIf(option[0] == "considerCrt")
+		JMap.setInt(jProfile, "lConsiderCreature", aiIndex)
+		SetMenuOptionValueST(lConsiderListCrt[aiIndex])
+
+	ElseIf(option[0] == "locProfile")
+		int i = option[1] as int
+		lProfiles[i] = smmProfiles[aiIndex]
+		SetMenuOptionValueST(lProfiles[i])
+	EndIf
+EndEvent
+
+; ===============================================================
+; =============================	HIGHLIGHTS
+; ===============================================================
+Event OnHighlightST()
+	String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+	If(option[0] == "consider") ; Profiles
+		SetInfoText("$SMM_ConsiderHighlight")
+	ElseIf(option[0] == "considerCrt")
+		SetInfoText("$SMM_ConsiderCrtHighlight")
+	EndIf
+EndEvent
+
+; ===============================================================
+; =============================	FULL STATES
+; ===============================================================
+
+State Enabled
+	Event OnSelectST()
+		bPaused = !bPaused
+		SetToggleOptionValueST(bPaused)
+		PlayerScr.ContinueScan()
+	EndEvent
+EndState
+State PauseKey
+	Event OnKeyMapChangeST(int newKeyCode, string conflictControl, string conflictName)
+		If(newKeyCode == 1) ; Esc
+			PlayerScr.UnregisterForKey(iPauseKey)
+			iPauseKey = -1
+			SetKeyMapOptionValueST(iPauseKey)
+			return
+		EndIf
+		bool continue = true
+		If(conflictControl != "")
+			string msg
+			If(conflictName != "")
+				msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n(" + conflictName + ")\n\nAre you sure you want to continue?"
+			else
+				msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n\nAre you sure you want to continue?"
+			EndIf
+			continue = ShowMessage(msg, true, "$Yes", "$No")
+		EndIf
+			If(continue)
+				iPauseKey = newKeyCode
+				SetKeyMapOptionValueST(iPauseKey)
+				PlayerScr.ResetKey(iPauseKey)
+			EndIf
+		EndEvent
+	Event OnDefaultST()
+		iPauseKey = 47
+		SetKeyMapOptionValueST(iPauseKey)
+		PlayerScr.ResetKey(iPauseKey)
+	EndEvent
+	Event OnHighlightST()
+		SetInfoText("Hotkey to pause or unpause the mod.\nEsc to unset")
+	EndEvent
+EndState
+
+; ===============================================================
+; =============================	PROFILE SYSTEM
+; ===============================================================
+Function SaveJson()
+	JValue.writeToFile(jProfile, filePath + smmProfiles[smmProfileIndex] + ".json")
+	jProfile = JValue.release(jProfile)
+EndFunction
+
+Function CreateMenuProfiles(int append0 = 0)
+	int jFiles = JValue.readFromDirectory(filePath)
+	String[] files = JMap.allKeysPArray(jFiles)
+	JValue.zeroLifetime(jFiles)
+	smmProfiles = Utility.CreateStringArray(files.length + append0)
+	If(append0 == 1)
+		smmProfiles[0] = "$SMM_Disabled"
+	EndIf
+	int i = 0
+	While(i < files.length)
+		smmProfiles[i + append0] = StringUtil.SubString(files[i], 0, StringUtil.GetLength(files[i]) - 5)
+		i += 1
+	EndWhile
+EndFunction
+
+State smmProfilesAdd
+	Event OnInputOpenST()
+		SetInputDialogStartText("Profile")
+	EndEvent
+	Event OnInputAcceptST(string a_input)
+		String profileName
+		int t = StringUtil.GetLength(a_input) - 5
+		If(StringUtil.SubString(a_input, t) != ".json")
+			profileName = a_input
+			a_input += ".json"
+		Else
+			profileName = StringUtil.Substring(a_input, 0, t)
+		EndIf
+		If(StringUtil.GetLength(profileName) < 1)
+			ShowMessage("$SMM_AddProfileError", false, "$SMM_Ok")
+			return
+		ElseIf(smmProfiles.Find(profileName) != -1)
+			If(!ShowMessage("$SMM_AddProfileDuplica", true, "$SMM_Yes", "$SMM_Cancel"))
+				return
+			EndIf
+		EndIf
+		SaveJson()
+		int newFile = JValue.readFromFile(filePath + "Definition\\Definition.json")
+		JValue.writeToFile(JValue.zeroLifetime(newFile), filePath + a_input)
+		CreateMenuProfiles()
+		smmProfileIndex = smmProfiles.Find(profileName)
+		ForcePageReset()
+	EndEvent
+EndState
+
+State smmProfilesLoad
+	Event OnMenuOpenST()
+		SetMenuDialogStartIndex(smmProfileIndex)
+		SetMenuDialogDefaultIndex(1)
+		SetMenuDialogOptions(smmProfiles)
+	EndEvent
+	Event OnMenuAcceptST(Int aiIndex)
+		SaveJson()
+		smmProfileIndex = aiIndex
+		ForcePageReset()
+	EndEvent
+	Event OnDefaultST()
+		smmProfileIndex = 1
+		ForcePageReset()
+	EndEvent
+	Event OnHighlightST()
+		SetInfoText("$SMM_ProfileLoadHighlight")
+	EndEvent
+EndState
+
+;/ =============================================================
 ; ===================================== TOGGLE & TEXT
 ; =============================================================
 Event OnSelectST()
@@ -87,10 +343,10 @@ Event OnSelectST()
 		else
 			Player.RegisterForSingleUpdate(iTickIntervall)
 		EndIf
-	ElseIf(option[0] == "AllowHostile")
+	ElseIf(options[0] == "AllowHostile")
 		bAllowHostile = !bAllowHostile
 		SetToggleOptionValueST(bAllowHostile)
-	ElseIf(option[0] == "AllowCreatures")
+	ElseIf(options[0] == "AllowCreatures")
 		bAllowCreatures = !bAllowCreatures
 		SetToggleOptionValueST(bAllowCreatures)
 
@@ -128,7 +384,7 @@ EndEvent
 Event OnMenuOpenST()
 	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
 	If(options[0] == "location") ; Location
-		int i = options[1]
+		int i = options[1] as int
 		SetMenuDialogStartIndex(locationTable[i])
 		SetMenuDialogDefaultIndex(1)
 		SetMenuDialogOptions(profiles)
@@ -138,7 +394,7 @@ EndEvent
 Event OnMenuAcceptST(int index)
 	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
 	If(options[0] == "location") ; Location
-		int i = options[1]
+		int i = options[1] as int
 		locationTable[i] = index
 		SetMenuOptionValueST(profiles[i])
 	EndIf
@@ -153,9 +409,9 @@ Event OnHighlightST()
 		SetInfoText("$SMM_EnabledHighlight")
 	ElseIf(options[0] == "TickInterval")
 		SetInfoText("$SMM_IntervalHighlight")
-	ElseIf(option[0] == "AllowHostile")
+	ElseIf(options[0] == "AllowHostile")
 		SetInfoText("$SMM_AllowHostileHighlight")
-	ElseIf(option[0] == "AllowCreatures")
+	ElseIf(options[0] == "AllowCreatures")
 		SetInfoText("$SMM_AllowCreaturesHighlight")
 	EndIf
 EndEvent
@@ -163,40 +419,6 @@ EndEvent
 ; =============================================================
 ; ===================================== STATES
 ; =============================================================
-State PauseKey
-	Event OnKeyMapChangeST(int newKeyCode, string conflictControl, string conflictName)
-		If(newKeyCode == 1)
-			Player.UnregisterForKey(iPauseKey)
-			iPauseKey = -1
-			SetKeyMapOptionValueST(iPauseKey)
-			return
-		EndIf
-		bool continue = true
-		If(conflictControl != "")
-			string msg
-			If(conflictName != "")
-				msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n(" + conflictName + ")\n\nAre you sure you want to continue?"
-			else
-				msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n\nAre you sure you want to continue?"
-			EndIf
-			continue = ShowMessage(msg, true, "$Yes", "$No")
-		EndIf
-			If(continue)
-				iPauseKey = newKeyCode
-				SetKeyMapOptionValueST(iPauseKey)
-				Player.ResetKey(iPauseKey)
-			EndIf
-		EndEvent
-	Event OnDefaultST()
-		iPauseKey = 47
-		SetKeyMapOptionValueST(iPauseKey)
-		Player.ResetKey(iPauseKey)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Hotkey to pause or unpause the mod.\nEsc to unset")
-	EndEvent
-EndState
-
 Event OnPageReset(string Page)
   SetCursorFillMode(TOP_TO_BOTTOM)
   If(Page == "")
@@ -667,7 +889,6 @@ bool Property bEngCreaMal = true Auto Hidden
 bool Property bEngCreaFem = true Auto Hidden
 bool Property bEngCreaFut = false Auto Hidden
 bool Property bEngCreaCrea = false Auto Hidden
-/;
 
 ; -------------------------- OIDS
 ; ----- Animations
@@ -2768,3 +2989,4 @@ int Function getFlagOR(bool optionA, bool optionB, bool optionC = false)
 		return OPTION_FLAG_DISABLED
 	EndIf
 EndFunction
+/;

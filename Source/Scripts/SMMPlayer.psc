@@ -1,59 +1,43 @@
 Scriptname SMMPlayer extends ReferenceAlias
 {Polling Script}
-; --------------- Properties
+
 SMMMCM Property MCM Auto
-Quest Property ScanQ Auto
-Faction Property FriendFaction Auto
+Quest Property Scan Auto
 FormList Property FriendList Auto
-Keyword[] Property LocationFriendly Auto
-Keyword[] Property LocationHostile Auto
+Faction Property FriendFaction Auto
+; -- LocTypes
+; Dwellings
 Keyword Property LocTypeDwelling Auto
+Keyword Property LocTypeCastle Auto
+Keyword Property LocTypeCemetery Auto
+Keyword Property LocTypeCity Auto
+Keyword Property LocTypeGuild Auto
+Keyword Property LocTypeHouse Auto
+Keyword Property LocTypeInn Auto
+Keyword Property LocTypeMine Auto
+Keyword Property LocTypeOrcStronghold Auto
+Keyword Property LocTypePlayerHouse Auto
+Keyword Property LocTypeSettlement Auto
+Keyword Property LocTypeTemple Auto
+Keyword Property LocTypeTown Auto
+Keyword Property LocTypeJail Auto ; <- Natively excluded to avoid Guards unlocking Cell Doors
+; Dungeons
 Keyword Property LocTypeDungeon Auto
+Keyword Property LocTypeAnimalDen Auto
+Keyword Property LocTypeBanditCamp Auto
+Keyword Property LocTypeDraugrCrypt Auto
+Keyword Property LocTypeDwarvenAutomatons Auto
+Keyword Property LocTypeFalmerHive Auto
+Keyword Property LocTypeForswornCamp Auto
+Keyword Property LocTypeHagravenNest Auto
+Keyword Property LocTypeMilitaryFort Auto
+Keyword Property LocTypeSprigganGrove Auto
+Keyword Property LocTypeVampireLair Auto
+Keyword Property LocTypeWarlockLair Auto
+Keyword Property LocTypeWerebearLair Auto
+Keyword Property LocTypeWerewolfLair Auto
 ; --------------- Variables
-int Property locProfile = -1 Auto Hidden
-; --------------- Code
-; =============================================================
-; ===================================== CYCLE
-; =============================================================
-Event OnUpdate()
-	If(DoScan())
-		If(!ScanQ.Start())
-			RegisterForSingleUpdate(MCM.iTickIntervall)
-		else
-			Debug.Debug.TraceConditional("[Scrappies] Checking Engagement", MCM.bPrintTraces)
-			If(MCM.bPrintTraces)
-				Debug.Notification("Checking Engagement..")
-			EndIf
-		EndIf
-		;/ TODO create the Threading System here /;
-	EndIf
-EndEvent
-
-bool Function DoScan()
-	return !(MCM.bPaused || locProfile == -1 || MCM.locationTable[locProfile] == 0 || UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
-EndFunction
-
-Event OnLocationChange(Location akOldLoc, Location akNewLoc)
-	If(!akNewLoc) ; Neutral Loc (Wilderness)
-		locProfile = 0
-	Else
-		If(akNewLoc.HasKeyword(LocTypeDwelling)) ; Friendly Loc
-			int i = 0
-			While(!akNewLoc.HasKeyword(Locations[i]) && i < (LocationFriendly.length - 1))
-				i += 1
-			EndWhile
-			locProfile = i + 1
-		ElseIf(akNewLoc.HasKeyword(LocTypeDungeon)) ; Hostile Loc
-			int i = 0
-			While(!akNewLoc.HasKeyword(Locations[i]) && i < (LocationHostile.length - 1))
-				i += 1
-			EndWhile
-			locProfile = i + 1 + LocationFriendly.length
-		else
-			locProfile = -1
-		EndIf
-	EndIf
-EndEvent
+String Property locProfile = "" Auto Hidden
 
 ; =============================================================
 ; ===================================== START UP
@@ -63,9 +47,8 @@ Event OnInit()
 EndEvent
 
 Event OnPlayerLoadGame()
-	If(!MCM.bPaused)
-		RegisterForSingleUpdate(MCM.iTickIntervall)
-	EndIf
+	Utility.Wait(3)
+	ContinueScan()
 	RegisterForKey(MCM.iPauseKey)
 	int i = 0
   While(i < FriendList.GetSize())
@@ -76,13 +59,8 @@ Event OnPlayerLoadGame()
 EndEvent
 
 Event OnKeyDown(int keyCode)
-	If(MCM.bPaused)
-		MCM.bPaused = false
-		RegisterForSingleUpdate(MCM.iTickIntervall)
-	else
-		MCM.bPaused = true
-		UnregisterForUpdate()
-	EndIf
+	MCM.bPaused = !MCM.bPaused
+	ContinueScan()
 EndEvent
 
 Function ResetKey(int newKeyCode)
@@ -90,179 +68,106 @@ Function ResetKey(int newKeyCode)
 	RegisterForKey(newKeyCode)
 EndFunction
 
+; =============================================================
+; ===================================== CYCLE
+; =============================================================
 
-
-
-;/ -------------------------- Properties
-RMMMCM Property MCM Auto
-RMMScan Property Scan Auto
-
-Actor Property PlayerRef Auto
-Quest Property ScanQ Auto
-Faction Property FriendFaction Auto
-Formlist Property FriendList Auto
-Spell Property RemoveFriendFac Auto
-
-Keyword Property LocTypeSettlement Auto
-Keyword Property LocTypeDungeon Auto
-
-Keyword Property LocTypeDragonLair Auto
-Keyword Property LocTypeBanditCamp Auto
-Keyword Property LocTypeGiantCamp Auto
-Keyword Property LocTypeMilitaryFort Auto
-Keyword Property LocTypeClearable Auto
-Keyword Property LocSetNordicRuin Auto
-Keyword Property LocSetDwarvenRuin Auto
-Keyword Property LocSetCave Auto
-Keyword Property LocTypeFalmerHive Auto
-Keyword Property LocTypeHagravenNest Auto
-
-Keyword Property LocTypeCity Auto
-Keyword Property LocTypeTown Auto
-Keyword Property LocTypeDwelling Auto
-Keyword Property LocTypeInn Auto
-Keyword Property LocTypePlayerHouse Auto
-
-; -------------------------- Variables
-bool Property modPaused = true Auto Hidden
-bool SkipScan = false
-string Property Profile Auto Hidden
-bool Property SaveLoc = false Auto Hidden
-
-; -------------------------- Properties
-Event OnInit()
-	OnPlayerLoadGame()
-EndEvent
-
-Event OnPlayerLoadGame()
-	If(!modPaused)
-		RegisterForSingleUpdate(MCM.iTickIntervall)
+Event OnUpdate()
+	If(locProfile == "")
+		return
+	ElseIf(Scan.Start())
+		UnregisterForUpdate()
+		Debug.Trace("[Scrappies] Checking Engagement")
 	EndIf
-	RegisterForKey(MCM.iPauseKey)
-	RegisterForModEvent("HookAnimationEnding_ScrappieMM", "ClearFactions")
-	int Count = FriendList.GetSize()
-  While(Count)
-    Count -= 1
-    Faction tmpFac = FriendList.GetAt(Count) as Faction
-    tmpFac.SetAlly(FriendFaction, true, true)
-  EndWhile
 EndEvent
 
-Event OnKeyDown(int keyCode)
-	If(modPaused)
-		modPaused = false
-		RegisterForSingleUpdate(MCM.iTickIntervall)
-	else
-		modPaused = true
+Function ContinueScan()
+	If(DoScan())
+		RegisterForUpdate(MCM.iTickIntervall)
+	Else
 		UnregisterForUpdate()
 	EndIf
-EndEvent
+EndFunction
 
+bool Function DoScan()
+	return !(MCM.bPaused || locProfile == "" || UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
+EndFunction
+
+; =============================================================
+; ===================================== LOCATION
+; =============================================================
+
+; Update the Profile for this Location. Index for Location in Translation Files
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)
-	If(modPaused)
-		return
-	EndIf
-	SaveLoc = false
-	SkipScan = true
-	If(akNewLoc == none)	;	Wilderness
-		If(MCM.iWildIndex != 0)
-			SkipScan = false
-			Profile = MCM.ProfileList[MCM.iWildIndex]
-		EndIf
-	else	;	FriendlyLocs
-		If(akNewLoc.HasKeyword(LocTypePlayerHouse))
-			If(MCM.iPlayerHomeIndex != 0)
-				SkipScan = false
-				Profile = MCM.ProfileList[MCM.iPlayerHomeIndex]
-				SaveLoc = true
-			EndIf
+	int p
+	If(!akNewLoc) ; Wilderness
+		p = 0
+	ElseIf(akNewLoc.HasKeyword(LocTypeDwelling)) ; Friendly Loc
+		If(akNewLoc.HasKeyword(LocTypeJail))
+			locprofile =  ""
 		ElseIf(akNewLoc.HasKeyword(LocTypeInn))
-			If(MCM.iInnIndex != 0)
-				SkipScan = false
-				Profile = MCM.ProfileList[MCM.iInnIndex]
-				SaveLoc = true
-			EndIf
-		ElseIf(akNewLoc.HasKeyword(LocTypeSettlement))
-			If(MCM.iSettlementIndex != 0)
-				SkipScan = false
-				Profile = MCM.ProfileList[MCM.iSettlementIndex]
-				SaveLoc = true
-			EndIf
+			p = 14
+		ElseIf(akNewLoc.HasKeyword(LocTypePlayerHouse))
+			p = 16
+		ElseIf(akNewLoc.HasKeyword(LocTypeGuild))
+			p = 20
+		ElseIf(akNewLoc.HasKeyword(LocTypeCemetery))
+			p = 22
+		ElseIf(akNewLoc.HasKeyword(LocTypeMine))
+			p = 24
+		ElseIf(akNewLoc.HasKeyword(LocTypeTemple))
+			p = 18
+		ElseIf(akNewLoc.HasKeyword(LocTypeCastle))
+			p = 10
+		ElseIf(akNewLoc.HasKeyword(LocTypeHouse))
+			p = 12
+		ElseIf(akNewLoc.HasKeyword(LocTypeOrcStronghold))
+			p = 8
 		ElseIf(akNewLoc.HasKeyword(LocTypeCity))
-			If(MCM.iCityIndex != 0)
-				SkipScan = false
-				Profile = MCM.ProfileList[MCM.iCityIndex]
-				SaveLoc = true
-			EndIf
+			p = 2
 		ElseIf(akNewLoc.HasKeyword(LocTypeTown))
-			If(MCM.iTownIndex != 0)
-				SkipScan = false
-				Profile = MCM.ProfileList[MCM.iTownIndex]
-				SaveLoc = true
-			EndIf
-		ElseIf(akNewLoc.HasKeyword(LocTypeDwelling))
-			If(MCM.iFriendLocIndex != 0)
-				SkipScan = false
-				Profile = MCM.ProfileList[MCM.iFriendLocIndex]
-				SaveLoc = true
-			EndIf
-		ElseIf(akNewLoc.HasKeyword(LocTypeDungeon))	;	Hostile Locs
-			If(akNewLoc.IsCleared())
-				If(MCM.iIfClearedIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iTownIndex]
-				EndIf
-			ElseIf(akNewLoc.HasKeyword(LocTypeDragonLair))
-				If(MCM.iDragonIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iDragonIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocTypeBanditCamp))
-				If(MCM.iBanditIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iBanditIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocTypeGiantCamp))
-				If(MCM.iGiantIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iGiantIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocTypeMilitaryFort))
-				If(MCM.iFortIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iFortIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocSetNordicRuin))
-				If(MCM.iNoridRuinIndex)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iNoridRuinIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocSetDwarvenRuin))
-				If(MCM.iDwarvenRuinIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iDwarvenRuinIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocSetCave))
-				If(MCM.iCavesIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iCavesIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocTypeFalmerHive))
-				If(MCM.iFalmerIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iFalmerIndex]
-				endIf
-			ElseIf(akNewLoc.HasKeyword(LocTypeHagravenNest))
-				If(MCM.iHagravenIndex != 0)
-					SkipScan = false
-					Profile = MCM.ProfileList[MCM.iHagravenIndex]
-				endIf
-			EndIf
-		endIf
-	endIf
-	RegisterForSingleUpdate(MCM.iTickIntervall)
+			p = 4
+		ElseIf(akNewLoc.HasKeyword(LocTypeSettlement))
+			p = 6
+		Else
+			p = 26
+		EndIf
+	Else ; Considering everything here Hostile
+		If(akNewLoc.HasKeyword(LocTypeWerebearLair))
+			p = 25
+		ElseIf(akNewLoc.HasKeyword(LocTypeWerewolfLair))
+			p = 23
+		ElseIf(akNewLoc.HasKeyword(LocTypeHagravenNest))
+			p = 21
+		ElseIf(akNewLoc.HasKeyword(LocTypeSprigganGrove))
+			p = 19
+		ElseIf(akNewLoc.HasKeyword(LocTypeAnimalDen))
+			p = 17
+		ElseIf(akNewLoc.HasKeyword(LocTypeMilitaryFort))
+			p = 9
+		ElseIf(akNewLoc.HasKeyword(LocTypeBanditCamp))
+			p = 1
+		ElseIf(akNewLoc.HasKeyword(LocTypeForswornCamp))
+			p = 3
+		ElseIf(akNewLoc.HasKeyword(LocTypeWarlockLair))
+			p = 5
+		ElseIf(akNewLoc.HasKeyword(LocTypeVampireLair))
+			p = 7
+		ElseIf(akNewLoc.HasKeyword(LocTypeFalmerHive))
+			p = 15
+		ElseIf(akNewLoc.HasKeyword(LocTypeDraugrCrypt))
+			p = 11
+		ElseIf(akNewLoc.HasKeyword(LocTypeDwarvenAutomatons))
+			p = 13
+		Else
+			p = 27
+		EndIf
+	EndIf
+	Debug.Trace("[ScrappiesMM] Changed Location <Index " + p + " >")
+	locProfile = MCM.lProfiles[p]
 EndEvent
 
+;/ -------------------------- SMM V2
 Event OnUpdate()
 	If(DoScan())
 		If(ScanQ.Start())
@@ -287,51 +192,4 @@ Event OnUpdate()
 		RegisterForSingleUpdate(MCM.iTickIntervall*1.5)
 	EndIf
 endEvent
-
-Event OnUpdateGameTime()
-	If(!modPaused)
-		RegisterForSingleUpdate(MCM.iTickIntervall)
-	EndIf
-EndEvent
-
-bool Function DoScan()
-	If(SkipScan)
-		return false
-		;/ COMBAK wait for pinkfuffs response. Ayah.. ;
-	ElseIf(UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
-		return false
-	EndIf
-	If(Profile == "Sheep")
-		If((Utility.RandomInt(1, 100) > MCM.iEngageChanceSheep))
-			return false
-		ElseIf(MCM.bCombatSkipSheep && PlayerRef.IsInCombat())
-			return false
-		endIf
-	ElseIf(Profile == "Wolf")
-		If((Utility.RandomInt(1, 100) > MCM.iEngageChanceWolf))
-			return false
-		ElseIf(MCM.bCombatSkipWolf && PlayerRef.IsInCombat())
-			return false
-		endIf
-	ElseIf(Profile == "Bunny")
-		If((Utility.RandomInt(1, 100) > MCM.iEngageChanceBunny))
-			return false
-		ElseIf(MCM.bCombatSkipBunny && PlayerRef.IsInCombat())
-			return false
-		endIf
-	EndIf
-	return true
-endFunction
-
-Event ClearFactions(int tid, bool hasPlayer)
-	Debug.Notification("SL Event fired")
-	sslThreadController Thread = Scan.SL.GetController(tid)
-	Actor[] Acteurs = Thread.Positions
-	int count = Acteurs.Length
-	Debug.Notification(Count)
-	While(Count)
-		Count -= 1
-		RemoveFriendFac.Cast(Acteurs[Count])
-	EndWhile
-EndEvent
 /;
