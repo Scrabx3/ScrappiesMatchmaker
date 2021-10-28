@@ -1,9 +1,35 @@
 {
+  "bCombatSkip": true,
+  "fEngageChance:": 60.0,
+  "fEngageTimeMin": 0.0,
+  "fEngageTimeMax": 24.0,
+  "fEngageCooldown": 6.0,
+
+  "bConsent": true,
+  "fDistance": 60.0,
+  "bLOS": false,
+  "iDisposition": -2,
+  "lIncest": 0,
+
   "lConsider": 1,
   "lConsiderCreature": 1,
   "bConsiderPlayer": false,
-  "bConsiderFollowers": false
+  "bConsiderFollowers": false,
+
+  "iArousalInit": 60,
+  "iArousalInitPl": 75,
+  "iArousalInitFol": 75,
+  "bGenderInit": [ true, true, true, false, false, false, false],
+  "lAdvInit": 0,
+  "cBaseChance": 5,
+  "cAChances": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  "iReqPoints": 0,
+  "reqAPoints": [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+  "rHealthThresh": 0.6,
+  "rStaminaThresh": 0.4,
+  "rMagickaThresh": 0.4,
+
+  "iArousalPartner": 40,
+  "iArousalPartnerFol": 70,
+  "bGenderPartner": [ true, true, true, false, false, false, false]
 }
-
-
-  

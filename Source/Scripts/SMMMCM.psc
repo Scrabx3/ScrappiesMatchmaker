@@ -4,12 +4,15 @@ SMMPlayer Property PlayerScr Auto
 ; ----------------------- Variables
 String[] classColors
 ; ---- General
-; -- Scan
+; Scan
 bool Property bPaused = true Auto Hidden
 int Property iTickIntervall = 20 Auto Hidden
 int Property iPauseKey = -1 Auto Hidden
+
+int Property iMaxScenese Auto Hidden
 ; ---- Locations
-String[] Property lProfiles Auto
+String[] Property lProfiles Auto Hidden
+
 ; ---- Profiles
 ; Use JContainer to handle Profiles.. Most variables will be stored in .jsons
 String filePath = "Data\\SKSE\\SMM\\"
@@ -18,49 +21,137 @@ int smmProfileIndex
 ;
 String[] lConsiderList
 String[] lConsiderListCrt
+String[] lIncestList
+String[] lAdvancedInitList
+String[] lReqList
+; --- Definition
+float Property fDuskTime = 19.00 Auto Hidden
+float Property fDawnTime = 5.00 Auto Hidden
+; --- Adult Frames
+bool Property bSLAllowed Auto Hidden
+bool Property bOStimAllowed Auto Hidden
+
+bool bMoreFilter = true
+bool bBestiality = true
+; 3p+ Weights
+float Property fAFMasturbate = 0.0 Auto Hidden
+int Property iAF2some = 70 Auto Hidden
+int Property iAF3some = 50 Auto Hidden
+int Property iAF4some = 40 Auto Hidden
+int Property iAF5Some = 30 Auto Hidden
+
+; --- Filterr
+bool[] Property bAssaultNPC Auto Hidden
+bool[] Property bAssaultFol Auto Hidden
+
+; --- Filter Creature
+string[] crtFilterMethodList
+int Property iCrtFilterMethod Auto Hidden
+bool[] Property bValidRace Auto Hidden
 
 ; ===============================================================
-; =============================	STARTUP // UTILITY
+; =============================  STARTUP // UTILITY
 ; ===============================================================
 int Function GetVersion()
-	return 1
+  return 1
+EndFunction
+
+int[] Function getXsomeWeight()
+  int[] sol
+  If(bSLAllowed)
+    sol = new int[4]
+    sol[2] = iAF4some
+    sol[3] = iAF5Some
+  else
+    sol = new int[2]
+  EndIf
+  sol[0] = iAF2some
+  sol[1] = iAF3some
+  return sol
 EndFunction
 
 Event OnVersionUpdate(int newVers)
-	;
+  ;
 EndEvent
 
 Event OnConfigInit()
-	Initialize()
+  Initialize()
 EndEvent
 
 Function Initialize()
-	Pages = new string[3]
-	Pages[0] = "$SMM_General"
-	Pages[1] = "$SMM_Locs"
-	Pages[2] = "$SMM_Profiles"
+  Pages = new string[6]
+  Pages[0] = "$SMM_General"
+  Pages[1] = "$SMM_Locs"
+  Pages[2] = "$SMM_Profiles"
+  Pages[3] = "$SMM_AnimFrame"
+  Pages[4] = "$SMM_Filter"
+  Pages[5] = "$SMM_FilterCrt"
 
-	; Colors
-	classColors = new String[3]
-	classColors[0] = "<font color = '#ffff00'>" ; Player - Yellow
-	classColors[1] = "<font color = '#00c707'>" ; Follower - Green
-	classColors[2] = "<font color = '#f536ff'>"	; NPC - Magnetta
+  ; Colors
+  classColors = new String[8]
+  classColors[0] = "<font color = '#ffff00'>" ; Player - Yellow
+  classColors[1] = "<font color = '#00c707'>" ; Follower - Green
+  classColors[2] = "<font color = '#f536ff'>"  ; NPC - Magnetta
+  ; - Profiling
+  classColors[3] = "<font color = '#db4040'>" ; Base Chance - Light Red
+  classColors[4] = "<font color = '#cfdfff'>" ; System/Consideration - White Blue
+  classColors[5] = "<font color = '#d6c13a'>" ; Initiator - Yellow
+  classColors[6] = "<font color = '#de8f28'>" ; Partner - Orange
+  classColors[7] = "<font color = '#4121c2'>" ; Matching - Blue Purple
 
-	lConsiderList = new String[3]
-	lConsiderList[0] = "$SMM_considerEither" ; Either
-	lConsiderList[1] = "$SMM_considerFriendly" ; Friendly Only
-	lConsiderList[2] = "$SMM_considerHostile" ; Hostile Only
+  lConsiderList = new String[3]
+  lConsiderList[0] = "$SMM_considerEither" ; Either
+  lConsiderList[1] = "$SMM_considerFriendly" ; Friendly Only
+  lConsiderList[2] = "$SMM_considerHostile" ; Hostile Only
 
-	lConsiderListCrt = new String[3]
-	lConsiderListCrt[0] = "$SMM_considerEither" ; Either
-	lConsiderListCrt[1] = "$SMM_considerHuman" ; Human only
-	lConsiderListCrt[2] = "$SMM_considerCreature" ; Creature only
+  lConsiderListCrt = new String[3]
+  lConsiderListCrt[0] = "$SMM_considerEither" ; Either
+  lConsiderListCrt[1] = "$SMM_considerHuman" ; Human only
+  lConsiderListCrt[2] = "$SMM_considerCreature" ; Creature only
 
-	lProfiles = Utility.CreateStringArray(28, "$SMM_Disabled")
+  lIncestList = new String[3]
+  lIncestList[0] = "$SMM_Incest_0" ; Disable
+  lIncestList[1] = "$SMM_Incest_1" ; No Parental
+  lIncestList[2] = "$SMM_Incest_2" ; Anything
+
+  lAdvancedInitList = new String[3]
+  lAdvancedInitList[0] = "$SMM_AdvInit_0" ; No Conditioning
+  lAdvancedInitList[1] = "$SMM_AdvInit_1" ; Chance
+  lAdvancedInitList[2] = "$SMM_AdvInit_2" ; Points
+
+  lReqList = new String[8]
+  lReqList[0] = "$SMM_RequirementList_0" ; Overwrite
+  lReqList[1] = "$SMM_RequirementList_1" ; Mandatory
+  lReqList[2] = "$SMM_RequirementList_2" ; +3
+  lReqList[3] = "$SMM_RequirementList_3" ; +2
+  lReqList[4] = "$SMM_RequirementList_4" ; +1
+  lReqList[5] = "$SMM_RequirementList_5" ; Ignore
+  lReqList[6] = "$SMM_RequirementList_6" ; -1
+  lReqList[7] = "$SMM_RequirementList_7" ; -2
+  lReqList[7] = "$SMM_RequirementList_8" ; -3
+
+  crtFilterMethodList = new string[4]
+	crtFilterMethodList[0] = "$SMM_scrFilterMethod_0" ; All Creatures
+	crtFilterMethodList[1] = "$SMM_scrFilterMethod_1" ; No Creatures
+	crtFilterMethodList[2] = "$SMM_scrFilterMethod_2" ; Use List
+	crtFilterMethodList[3] = "$SMM_scrFilterMethod_3" ; Use List Reverse
+
+  lProfiles = Utility.CreateStringArray(28, "$SMM_Disabled")
+  bAssaultNPC = Utility.CreateBoolArray(35)
+  bAssaultFol = Utility.CreateBoolArray(35)
+  int i = 0
+  While(i < bAssaultNPC.Length)
+    If(i % 7 == 2 || i % 7 == 3)
+      bAssaultNPC[i] = true
+      bAssaultFol[i] = true
+    EndIf
+    i += 1
+  EndWhile
+
 EndFunction
 
 ; ===============================================================
-; =============================	MENU
+; =============================  MENU
 ; ===============================================================
 int jProfile
 
@@ -68,355 +159,718 @@ Event OnPageReset(string Page)
   SetCursorFillMode(TOP_TO_BOTTOM)
   If(Page == "")
     Page = "$SMM_Profiles"
-	ELseIf(jProfile != 0)
-		SaveJson()
+  ELseIf(jProfile != 0)
+    SaveJson()
   EndIf
   If(Page == "$SMM_General")
-		AddToggleOptionST("Enabled", "$SMM_Enabled", !bPaused)
-		AddKeyMapOptionST("PauseKey", "$SMM_PauseHotkey", iPauseKey)
-		AddSliderOptionST("TickInterval", "$SMM_Interval", iTickIntervall, "{0}s")
+    AddToggleOptionST("Enabled", "$SMM_Enabled", !bPaused)
+    AddKeyMapOptionST("PauseKey", "$SMM_PauseHotkey", iPauseKey)
+    AddSliderOptionST("TickInterval", "$SMM_Interval", iTickIntervall, "{0}s")
 
-	ElseIf(Page == "$SMM_Locs")
-		CreateMenuProfiles(1)
-		SetCursorFillMode(LEFT_TO_RIGHT)
-		AddEmptyOption()
-		AddTextOptionST("locProfileHelp", "$SMM_Help", none)
-		AddHeaderOption("")
-		AddHeaderOption("")
-		int i = 0
-		While(i < lProfiles.length)
-			AddMenuOptionST("locProfile_" + i, "$SMM_locProfile_" + i, lProfiles[i])
-			i += 1
-		EndWhile
+  ElseIf(Page == "$SMM_Locs")
+    CreateMenuProfiles(1)
+    SetCursorFillMode(LEFT_TO_RIGHT)
+    AddEmptyOption()
+    AddTextOptionST("locProfileHelp", "$SMM_Help", none)
+    AddHeaderOption("")
+    AddHeaderOption("")
+    int i = 0
+    While(i < lProfiles.length)
+      AddMenuOptionST("locProfile_" + i, "$SMM_locProfile_" + i, lProfiles[i])
+      i += 1
+    EndWhile
 
-	ElseIf(Page == "$SMM_Profiles")
-		CreateMenuProfiles()
-		String thisProfile
-		If(!smmProfiles || smmProfileIndex >= smmProfiles.Length)
-			thisProfile = ""
-		else
-			thisProfile = smmProfiles[smmProfileIndex]
-		EndIf
-		jProfile = JValue.retain(JValue.readFromFile(filePath + thisProfile + ".json"), "SMM")
-		AddMenuOptionST("smmProfilesLoad", "$SMM_ProfileLoad", thisProfile)
-		AddInputOptionST("smmProfilesAdd", "$SMM_ProfileAdd", none)
-		SetCursorPosition(1)
-		AddTextOptionST("ProfilesHelp", "SMM_Help", none)
-		SetCursorPosition(4)
-		AddHeaderOption(thisProfile)
-		If(thisProfile == "")
-			AddTextOption("$SMM_NoProfileError", "", OPTION_FLAG_DISABLED)
-			return
-		EndIf
-		AddMenuOptionST("consider", "$SMM_Consider", lConsiderList[JMap.getInt(jProfile, "lConsider")])
-		AddMenuOptionST("considerCrt", "$SMM_ConsiderCrt", lConsiderListCrt[JMap.getInt(jProfile, "lConsiderCreature")])
-		AddToggleOptionST("considerPlayer", "$SMM_ConsiderPlayer", JMap.getInt(jProfile, "bConsiderPlayer"))
-		AddToggleOptionST("considerFollower", "$SMM_ConsiderFollower", JMap.getInt(jProfile, "bConsiderFollowers"))
-		SetCursorPosition(5)
-		AddHeaderOption("")
+  ElseIf(Page == "$SMM_Profiles")
+    CreateMenuProfiles()
+    String thisProfile
+    If(!smmProfiles || smmProfileIndex >= smmProfiles.Length)
+      thisProfile = ""
+    else
+      thisProfile = smmProfiles[smmProfileIndex]
+    EndIf
+    jProfile = JValue.retain(JValue.readFromFile(filePath + thisProfile + ".json"), "SMM")
+    AddMenuOptionST("smmProfilesLoad", "$SMM_ProfileLoad", thisProfile)
+    AddInputOptionST("smmProfilesAdd", "$SMM_ProfileAdd", none)
+    SetCursorPosition(1)
+    AddTextOptionST("ProfilesHelp", "$SMM_Help", none)
+    AddTextOptionST("ProfileDefinition", "$SMM_Definition", none)
+    SetCursorPosition(4)
+    If(thisProfile == "")
+      AddEmptyOption()
+      AddTextOption("$SMM_NoProfileError", "", OPTION_FLAG_DISABLED)
+      return
+    EndIf
+    ; ======================== SYSTEM
+    AddHeaderOption(classColors[4] + "$SMM_System")
+    AddToggleOptionST("combatSkip", "$SMM_combatSkip", JMap.getInt(jProfile, "bCombatSkip"))
+    AddSliderOptionST("EngageChance", "$SMM_EngageChance", JMap.getFlt(jProfile, "fEngageChance"), "{1}%")
+    AddSliderOptionST("EngageTimeMax", "$SMM_EngageTimeMax", JMap.getFlt(jProfile, "fEngageTimeMax"), "{2}")
+    AddSliderOptionST("EngageTimeMin", "$SMM_EngageTimeMin", JMap.getFlt(jProfile, "fEngageTimeMin"), "{2}")
+    AddSliderOptionST("EngageCooldown", "$SMM_EngageCooldown", JMap.getFlt(jProfile, "fEngageCooldown"), "{1}h")
+    SetCursorPosition(5)
+    ; ======================== CONSIDERATION
+    AddHeaderOption(classColors[4] + "$SMM_Consideration")
+    AddMenuOptionST("consider", "$SMM_Consider", lConsiderList[JMap.getInt(jProfile, "lConsider")])
+    AddMenuOptionST("considerCrt", "$SMM_ConsiderCrt", lConsiderListCrt[JMap.getInt(jProfile, "lConsiderCreature")])
+    AddToggleOptionST("considerPlayer", "$SMM_ConsiderPlayer", JMap.getInt(jProfile, "bConsiderPlayer"))
+    AddToggleOptionST("considerFollower", "$SMM_ConsiderFollower", JMap.getInt(jProfile, "bConsiderFollowers"))
+    AddEmptyOption()
+    SetCursorPosition(16)
+    ; ======================== INITIATOR
+    AddHeaderOption(classColors[5] + "$SMM_Initiator")
+    int aca = JMap.getInt(jProfile, "lAdvInit")
+    AddSliderOptionST("ArousalInit", "$SMM_Arousal", JMap.getInt(jProfile, "iArousalInit"), "{0}")
+    AddSliderOptionST("ArousalInitPl", "$SMM_ArousalPl", JMap.getInt(jProfile, "iArousalInitPl"), "{0}")
+    AddSliderOptionST("ArousalInitFol", "$SMM_ArousalFol", JMap.getInt(jProfile, "iArousalInitFol"), "{0}")
+    AddEmptyOption()
+    AddSliderOptionST("InitHealth", "$SMM_HealthThresh", JMap.getInt(jProfile, "rHealthThresh") * 100, "{0}%", getFlag(aca > 0))
+    AddSliderOptionST("InitStamina", "$SMM_StaminaThresh", JMap.getInt(jProfile, "rStaminaThresh") * 100, "{0}%", getFlag(aca > 0))
+    AddSliderOptionST("InitMagicka", "$SMM_MagickaThresh", JMap.getInt(jProfile, "rMagickaThresh") * 100, "{0}%", getFlag(aca > 0))
+    SetCursorPosition(17)
+    AddHeaderOption("")
+    int jTmp = JMap.getObj(jProfile, "bGenderInit")
+    int i = 0
+    While(i < JArray.count(jTmp))
+      If((i != 3 || bMoreFilter) && (i != 4 || bBestiality) && (i != 5 || bMoreFilter && bBestiality))
+        AddToggleOptionST("GenderInit_" + i, "$SMM_GenderAllow_" + i, JArray.getInt(jTmp, i))
+      EndIf
+      i += 1
+    EndWhile
+    SetCursorPosition(32)
+    ; ---------------------------
+    AddHeaderOption("$SMM_ReqConditioning")
+    AddMenuOptionST("AdvConAlg", "$SMM_AdvConAlg", lAdvancedInitList[aca])
+    i = 0
+    If(aca == 2) ; Points
+      AddSliderOptionST("ReqPointsBase", classColors[3] + "$SMM_ReqPoints", JMap.getInt(jProfile, "iReqPoints"), "{0}")
+      int[] c = JArray.asIntArray(JMap.getObj(jProfile, "reqAPoints"))
+      While(i < c.Length)
+        AddMenuOptionST("reqPoints_" + i, "$SMM_AdvCon_" + i, lReqList[c[i]])
+        If(i == 6)
+          SetCursorPosition(33)
+          AddEmptyOption()
+          AddTextOptionST("AdvCondition", "$SMM_Help", none)
+          AddEmptyOption()
+        EndIf
+        i += 1
+      EndWhile
+    Else ; Chance (or none)
+      AddSliderOptionST("chanceBase", classColors[3] + "$SMM_BaseChance", JMap.getInt(jProfile, "cBaseChance"), "{1}%", getFlag(aca == 1))
+      int[] c = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
+      While(i < c.Length)
+        AddSliderOptionST("aChances_" + i, "$SMM_AdvCon_" + i, c[i], "{1}%", getFlag(aca == 1))
+        If(i == 6)
+          SetCursorPosition(33)
+          AddEmptyOption()
+          AddTextOptionST("AdvCondition", "$SMM_Help", none)
+          AddEmptyOption()
+        EndIf
+        i += 1
+      EndWhile
+    EndIf
+    SetCursorPosition(52)
+    ; ======================== PARTNER
+    AddHeaderOption(classColors[6] + "$SMM_Partner")
+    AddSliderOptionST("ArousalPartner", "$SMM_Arousal", JMap.getInt(jProfile, "iArousalPartner"), "{0}")
+    AddSliderOptionST("ArousalPartnerFol", "$SMM_ArousalFol", JMap.getInt(jProfile, "iArousalPartnerFol"), "{0}")
+    jTmp = JMap.getObj(jProfile, "bGenderPartner")
+    i = 0
+    While(i < JArray.count(jTmp) - 1)
+      If((i != 3 || bMoreFilter) && (i != 4 || bBestiality) && (i != 5 || bMoreFilter && bBestiality))
+        AddToggleOptionST("GenderPartner_" + i, "$SMM_GenderAllow_" + i, JArray.getInt(jTmp, i))
+      EndIf
+      i += 1
+    EndWhile
+    AddSliderOptionST("GenderPartner_" + i, "$SMM_GenderAllow_" + i, JArray.getInt(jTmp, i), "{1}%")
+    SetCursorPosition(53)
+    ; ======================== MATCHING
+    AddHeaderOption(classColors[7] + "$SMM_Matching")
+    AddToggleOptionST("NonConsent", "$SMM_NonConsent", JMap.getInt(jProfile, "bConsent"))
+    AddSliderOptionST("Distance", "$SMM_Distance", JMap.getInt(jProfile, "fDistance"), "{1}m")
+    AddToggleOptionST("LineOfSight", "$SMM_LineOfSight", JMap.getInt(jProfile, "bLOS"))
+    AddSliderOptionST("Disposition", "$SMM_Disposition", JMap.getInt(jProfile, "iDisposition"), "{0}")
+    AddMenuOptionST("Incest", "$SMM_Incest", lIncestList[JMap.getInt(jProfile, "lIncest")])
+
+	ElseIf(Page == "$SMM_AnimFrame")
+		bool SLThere = Game.GetModByName("SexLab.esm") != 255
+		bool OStimThere = Game.GetModByName("OStim.esp") != 255
+
+		AddSliderOptionST("af2pWeight", "$SMM_af2pWeight", iAF2some, "{0}")
+		AddSliderOptionST("af3pWeight", "$SMM_af3pWeight", iAF3some, "{0}")
+		AddSliderOptionST("af4pWeight", "$SMM_af4pWeight", iAF4some, "{0}", getFlag(SLThere))
+		AddSliderOptionST("af5pWeight", "$SMM_af5pWeight", iAF5Some, "{0}", getFlag(SLThere))
+
+  ElseIf(Page == "$SMM_Filter")
+    int i = 0
+    While(i < 5)
+      AddHeaderOption(classColors[2] + "$SMM_filterNPC_" + i)
+      ; Male, Female, Futa, Creature, Fem Creature
+      int n = 0
+      While(n < 7)
+        ; Player, Follower, Male, Female, Futa, Creature, Fem Creature
+        int j = i * 7 + n
+        If((n != 4 || bMoreFilter) && (n != 5 || bBestiality) && (n != 6 || bMoreFilter && bBestiality))
+          AddToggleOptionST("filterNPC_" + j, "$SMM_FilterClass_" + n, bAssaultNPC[j])
+        EndIf
+        n += 1
+      EndWhile
+      i += 1
+    EndWhile
+    SetCursorPosition(1)
+    i = 0
+    While(i < 5)
+      AddHeaderOption(classColors[1] + "$SMM_filterFollower_" + i)
+      ; Male, Female, Futa, Creature, Fem Creature
+      int n = 0
+      While(n < 7)
+        ; Player, Follower, Male, Female, Futa, Creature, Fem Creature
+        int j = i * 7 + n
+        If((n != 4 || bMoreFilter) && (n != 5 || bBestiality) && (n != 6 || bMoreFilter && bBestiality))
+          AddToggleOptionST("filterFol_" + j, "$SMM_FilterClass_" + n, bAssaultFol[j])
+        EndIf
+        n += 1
+      EndWhile
+      i += 1
+    EndWhile
+
   EndIf
 endEvent
 
 Event OnConfigClose()
-	If(jProfile != 0)
-		SaveJson()
-	EndIf
-	JValue.releaseObjectsWithTag("SMM")
+  If(jProfile != 0)
+    SaveJson()
+  EndIf
+  JValue.releaseObjectsWithTag("SMM")
 EndEvent
 
 ; ===============================================================
-; =============================	SELECTION STATES
+; =============================  SELECTION STATES
 ; ===============================================================
 Event OnSelectST()
-	String option = GetState()
-	If(option == "considerPlayer")
-		int val = JMap.getInt(jProfile, "bConsiderPlayer")
-		JMap.setInt(jProfile, "bConsiderPlayer", Math.abs(val - 1) as int)
-		SetToggleOptionValueST(JMap.getInt(jProfile, "bConsiderPlayer"))
-	ElseIf(option == "considerFollower")
-		int val = JMap.getInt(jProfile, "bConsiderFollowers")
-		JMap.setInt(jProfile, "bConsiderFollowers", Math.abs(val - 1) as int)
-		SetToggleOptionValueST(JMap.getInt(jProfile, "bConsiderFollowers"))
-	EndIf
+  String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+  If(option[0] == "considerPlayer") ; Profiles
+    int val = JMap.getInt(jProfile, "bConsiderPlayer")
+    JMap.setInt(jProfile, "bConsiderPlayer", Math.abs(val - 1) as int)
+    SetToggleOptionValueST(JMap.getInt(jProfile, "bConsiderPlayer"))
+  ElseIf(option[0] == "considerFollower")
+    int val = JMap.getInt(jProfile, "bConsiderFollowers")
+    JMap.setInt(jProfile, "bConsiderFollowers", Math.abs(val - 1) as int)
+    SetToggleOptionValueST(JMap.getInt(jProfile, "bConsiderFollowers"))
+  ElseIf(option[0] == "GenderInit")
+    int jTmp = JMap.getObj(jProfile, "bGenderInit") 
+    int i = option[1] as int
+    JArray.setInt(jTmp, i, Math.abs(JArray.getInt(jTmp, i) - 1) as int)
+    JMap.setObj(jProfile, "bGenderInit", jTmp)
+    SetToggleOptionValueST(JArray.getInt(jTmp, i))
+  ElseIf(option[0] == "GenderPartner")
+    int jTmp = JMap.getObj(jProfile, "bGenderPartner") 
+    int i = option[1] as int
+    JArray.setInt(jTmp, i, Math.abs(JArray.getInt(jTmp, i) - 1) as int)
+    JMap.setObj(jProfile, "bGenderPartner", jTmp)
+    SetToggleOptionValueST(JArray.getInt(jTmp, i))
+  ElseIf(option[0] == "combatSkip")
+    int val = JMap.getInt(jProfile, "bCombatSkip")
+    JMap.setInt(jProfile, "bCombatSkip", Math.abs(val - 1) as int)
+    SetToggleOptionValueST(JMap.getInt(jProfile, "bCombatSkip"))
+  ElseIf(option[0] == "NonConsent")
+    int val = JMap.getInt(jProfile, "bConsent")
+    JMap.setInt(jProfile, "bConsent", Math.abs(val - 1) as int)
+    SetToggleOptionValueST(JMap.getInt(jProfile, "bConsent"))
+  ElseIf(option[0] == "LineOfSight")
+    int val = JMap.getInt(jProfile, "bLOS")
+    JMap.setInt(jProfile, "bLOS", Math.abs(val - 1) as int)
+    SetToggleOptionValueST(JMap.getInt(jProfile, "bLOS"))
+
+  ElseIf(option[0] == "filterNPC") ; Filter
+    int i = option[1] as int
+		bAssaultNPC[i] = !bAssaultNPC[i]
+		SetToggleOptionValueST(bAssaultNPC[i])
+  ElseIf(option[0] == "filterFol")
+    int i = option[1] as int
+    bAssaultFol[i] = !bAssaultFol[i]
+    SetToggleOptionValueST(bAssaultFol[i])
+
+  ElseIf(option[0] == "ProfilesHelp")
+    ShowMessage("$SMM_ProfileHelp", false, "$SMM_Ok")
+  ElseIf(option[0] == "AdvCondition")
+    ShowMessage("$SMM_ReqConditioningHelp0", false, "$SMM_Ok")
+  ElseIf(option[0] == "ProfileDefinition")
+    ShowMessage("$SMM_DefinitionHelp", false, "$SMM_Ok")
+  EndIf
 EndEvent
 
 ; ===============================================================
-; =============================	SLIDER STATES
+; =============================  SLIDER STATES
 ; ===============================================================
 Event OnSliderOpenST()
-	String option = GetState()
-	If(option == "TickIntervall") ; General
-		SetSliderDialogStartValue(iTickIntervall)
-		SetSliderDialogDefaultValue(20)
-		SetSliderDialogRange(5, 300)
+  String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+  If(option[0] == "TickIntervall") ; General
+    SetSliderDialogStartValue(iTickIntervall)
+    SetSliderDialogDefaultValue(20)
+    SetSliderDialogRange(5, 300)
+    SetSliderDialogInterval(1)
+
+  ElseIf(option[0] == "ArousalInit") ; Profile
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "iArousalInit"))
+    SetSliderDialogDefaultValue(60)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "ArousalInitPl")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "iArousalInitPl"))
+    SetSliderDialogDefaultValue(75)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "ArousalInitFol")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "iArousalInitFol"))
+    SetSliderDialogDefaultValue(75)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "ArousalPartner")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "iArousalPartner"))
+    SetSliderDialogDefaultValue(40)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "ArousalPartnerFol")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "iArousalPartnerFol"))
+    SetSliderDialogDefaultValue(70)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "EngageChance")
+    SetSliderDialogStartValue(JMap.getFlt(jProfile, "fEngageChance"))
+    SetSliderDialogDefaultValue(60)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(0.1)
+  ElseIf(option[0] == "EngageTimeMin")
+    SetSliderDialogStartValue(JMap.getFlt(jProfile, "fEngageTimeMin"))
+    SetSliderDialogDefaultValue(0)
+    SetSliderDialogRange(0, 24)
+    SetSliderDialogInterval(0.05)
+  ElseIf(option[0] == "EngageTimeMax")
+    SetSliderDialogStartValue(JMap.getFlt(jProfile, "fEngageTimeMax"))
+    SetSliderDialogDefaultValue(70)
+    SetSliderDialogRange(0, 24)
+    SetSliderDialogInterval(0.05)
+  ElseIf(option[0] == "EngageCooldown")
+    SetSliderDialogStartValue(JMap.getFlt(jProfile, "fEngageCooldown"))
+    SetSliderDialogDefaultValue(70)
+    SetSliderDialogRange(0, 48)
+    SetSliderDialogInterval(0.5)
+  ElseIf(option[0] == "Distance")
+    SetSliderDialogStartValue(JMap.getFlt(jProfile, "fDistance"))
+    SetSliderDialogDefaultValue(60)
+    SetSliderDialogRange(30, 250)
+    SetSliderDialogInterval(0.1)
+  ElseIf(option[0] == "Disposition")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "iDisposition"))
+    SetSliderDialogDefaultValue(-2)
+    SetSliderDialogRange(-2, 4)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "ReqPointsBase")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "iReqPoints"))
+    SetSliderDialogDefaultValue(0)
+    SetSliderDialogRange(0, 15)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "chanceBase")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "cBaseChance"))
+    SetSliderDialogDefaultValue(0)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "aChances")
+    int i = option[1] as int
+    SetSliderDialogStartValue(JArray.getInt(JMap.getObj(jProfile, "cAChances"), i))
+    SetSliderDialogDefaultValue(0)
+    SetSliderDialogRange(-100, 100)
+    SetSliderDialogInterval(0.5)
+  ElseIf(option[0] == "InitHealth")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "rHealthThresh"))
+    SetSliderDialogDefaultValue(60)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "InitStamina")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "rStaminaThresh"))
+    SetSliderDialogDefaultValue(40)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "InitMagicka")
+    SetSliderDialogStartValue(JMap.getInt(jProfile, "rMagickaThresh"))
+    SetSliderDialogDefaultValue(40)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+  ElseIf(option[0] == "GenderPartner")
+    int i = option[1] as int
+    SetSliderDialogStartValue(JArray.getInt(JMap.getObj(jProfile, "bGenderPartner"), i))
+    SetSliderDialogDefaultValue(40)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(1)
+
+	ElseIf(option[0] == "af2pWeight") ; Adult Frame
+		SetSliderDialogStartValue(iAF2some)
+		SetSliderDialogDefaultValue(70)
+		SetSliderDialogRange(0, 100)
 		SetSliderDialogInterval(1)
-	EndIf
+	ElseIf(option[0] == "af3pWeight")
+		SetSliderDialogStartValue(iAF3some)
+		SetSliderDialogDefaultValue(50)
+		SetSliderDialogRange(0, 100)
+		SetSliderDialogInterval(1)
+	ElseIf(option[0] == "af4pWeight")
+		SetSliderDialogStartValue(iAF4some)
+		SetSliderDialogDefaultValue(40)
+		SetSliderDialogRange(0, 100)
+		SetSliderDialogInterval(1)
+	ElseIf(option[0] == "af5pWeight")
+		SetSliderDialogStartValue(iAF5Some)
+		SetSliderDialogDefaultValue(30)
+		SetSliderDialogRange(0, 100)
+		SetSliderDialogInterval(1)
+  EndIf
 EndEvent
 
 Event OnSliderAcceptST(Float afValue)
-	String option = GetState()
-	If(option == "TickIntervall") ; General
-		iTickIntervall = afValue as Int
-		SetSliderOptionValueST(iTickIntervall)
-	EndIf
+  String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+  If(option[0] == "TickIntervall") ; General
+    iTickIntervall = afValue as Int
+    SetSliderOptionValueST(iTickIntervall, "{0}")
+    
+  ElseIf(option[0] == "ArousalInit") ; Profile
+    JMap.setInt(jProfile, "iArousalInit", afValue as int)
+    SetSliderOptionValueST(afValue, "{0}")
+  ElseIf(option[0] == "ArousalInitPl")
+    JMap.setInt(jProfile, "iArousalInitPl", afValue as int)
+    SetSliderOptionValueST(afValue, "{0}")
+  ElseIf(option[0] == "ArousalInitFol")
+    JMap.setInt(jProfile, "iArousalInitFol", afValue as int)
+    SetSliderOptionValueST(afValue, "{0}")
+  ElseIf(option[0] == "ArousalPartner")
+    JMap.setInt(jProfile, "iArousalPartner", afValue as int)
+    SetSliderOptionValueST(afValue, "{0}")
+  ElseIf(option[0] == "ArousalPartnerFol")
+    JMap.setInt(jProfile, "iArousalPartnerFol", afValue as int)
+    SetSliderOptionValueST(afValue, "{0}")
+  ElseIf(option[0] == "EngageChance")
+    JMap.setFlt(jProfile, "fEngageChance", afValue)
+    SetSliderOptionValueST(afValue, "{1}%")
+  ElseIf(option[0] == "EngageTimeMin")
+    JMap.setFlt(jProfile, "fEngageTimeMin", afValue)
+    SetSliderOptionValueST(afValue, "{2}")
+  ElseIf(option[0] == "EngageTimeMax")
+    JMap.setFlt(jProfile, "fEngageTimeMax", afValue)
+    SetSliderOptionValueST(afValue, "{2}")
+  ElseIf(option[0] == "EngageCooldown")
+    JMap.setFlt(jProfile, "fEngageCooldown", afValue)
+    SetSliderOptionValueST(afValue, "{1}h")
+  ElseIf(option[0] == "Distance")
+    JMap.setFlt(jProfile, "fDistance", afValue)
+    SetSliderOptionValueST(afValue, "{1}m")
+  ElseIf(option[0] == "Disposition")
+    JMap.setInt(jProfile, "iDisposition", afValue as int)
+    SetSliderOptionValueST(afValue, "{0}")
+  ElseIf(option[0] == "ReqPointsBase")
+    JMap.setInt(jProfile, "iReqPoints", afValue as int)
+    SetSliderOptionValueST(afValue, "{0}")
+  ElseIf(option[0] == "chanceBase")
+    JMap.setInt(jProfile, "cBaseChance", afValue as int)
+    SetSliderOptionValueST(afValue, "{1}%")
+  ElseIf(option[0] == "aChances")
+    int i = option[1] as int
+    int jTmp = JMap.getInt(jProfile, "cAChances")
+    JArray.setFlt(jTmp, i, afValue)
+    JMap.setObj(jProfile, "cAChances", jTmp)
+    SetSliderOptionValueST(afValue, "{1}%")
+  ElseIf(option[0] == "InitHealth")
+    JMap.setFlt(jProfile, "rHealthThresh", afValue/100)
+    SetSliderOptionValueST(afValue, "{0}%")
+  ElseIf(option[0] == "InitStamina")
+    JMap.setFlt(jProfile, "rStaminaThresh", afValue/100)
+    SetSliderOptionValueST(afValue, "{0}%")
+  ElseIf(option[0] == "InitMagicka")
+    JMap.setFlt(jProfile, "rMagickaThresh", afValue/100)
+    SetSliderOptionValueST(afValue, "{0}%")
+  ElseIf(option[0] == "GenderPartner")
+    int i = option[1] as int
+    int jTmp = JMap.getObj(jProfile, "bGenderPartner")
+    JArray.setFlt(jTmp, i, afValue)
+    JMap.setObj(jProfile, "bGenderPartner", jTmp)
+    SetSliderOptionValueST(afValue, "{0}%")
+    
+
+    
+    int jA = JMap.getInt(jProfile, "cAChances")
+    JArray.setFlt(jA, i, afValue)
+    JMap.setObj(jProfile, "cAChances", jA)
+	ElseIf(option[0] == "af2pWeight") ; Animation Frame
+		iAF2some = afValue as int
+		SetSliderOptionValueST(iAF2some)
+	ElseIf(option[0] == "af3pWeight")
+		iAF3some = afValue as int
+		SetSliderOptionValueST(iAF3some)
+	ElseIf(option[0] == "af4pWeight")
+		iAF4some = afValue as int
+		SetSliderOptionValueST(iAF4some)
+	ElseIf(option[0] == "af5pWeight")
+		iAF5Some = afValue as int
+		SetSliderOptionValueST(iAF5Some)
+  EndIf
 EndEvent
 
 ; ===============================================================
-; =============================	MENU STATES
+; =============================  MENU STATES
 ; ===============================================================
 Event OnMenuOpenST()
-	String[] option = PapyrusUtil.StringSplit(GetState(), "_")
-	If(option[0] == "consider") ; Profiles
-		SetMenuDialogStartIndex(JMap.getInt(jProfile, "lConsider"))
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(lConsiderList)
-	ElseIf(option[0] == "considerCrt")
-		SetMenuDialogStartIndex(JMap.getInt(jProfile, "lConsiderCreature"))
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(lConsiderListCrt)
+  String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+  If(option[0] == "consider") ; Profiles
+    SetMenuDialogStartIndex(JMap.getInt(jProfile, "lConsider"))
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(lConsiderList)
+  ElseIf(option[0] == "considerCrt")
+    SetMenuDialogStartIndex(JMap.getInt(jProfile, "lConsiderCreature"))
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(lConsiderListCrt)
+  ElseIf(option[0] == "Incest")
+    SetMenuDialogStartIndex(JMap.getInt(jProfile, "lIncest"))
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(lIncestList)
+  ElseIf(option[0] == "AdvConAlg")
+    SetMenuDialogStartIndex(JMap.getInt(jProfile, "lAdvInit"))
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(lAdvancedInitList)
+  ElseIf(option[0] == "reqPoints")
+    int i = option[1] as int
+    int jA = JMap.getObj(jProfile, "reqAPoints")
+    SetMenuDialogStartIndex(lReqList.Find(JArray.getInt(jA, i)))
+    SetMenuDialogDefaultIndex(5)
+    SetMenuDialogOptions(lReqList)
 
-	ElseIf(option[0] == "locProfile")
-		int i = option[1] as int
-		int c = smmProfiles.Find(lProfiles[i])
-		SetMenuDialogStartIndex(c)
-		SetMenuDialogDefaultIndex(0)
-		SetMenuDialogOptions(smmProfiles)
-	EndIf
+  ElseIf(option[0] == "locProfile")
+    int i = option[1] as int
+    int c = smmProfiles.Find(lProfiles[i])
+    SetMenuDialogStartIndex(c)
+    SetMenuDialogDefaultIndex(0)
+    SetMenuDialogOptions(smmProfiles)
+  EndIf
 EndEvent
 
 Event OnMenuAcceptST(Int aiIndex)
-	String[] option = PapyrusUtil.StringSplit(GetState(), "_")
-	If(option[0] == "consider") ; Profiles
-		JMap.setInt(jProfile, "lConsider", aiIndex)
-		SetMenuOptionValueST(lConsiderList[aiIndex])
-	ElseIf(option[0] == "considerCrt")
-		JMap.setInt(jProfile, "lConsiderCreature", aiIndex)
-		SetMenuOptionValueST(lConsiderListCrt[aiIndex])
+  String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+  If(option[0] == "consider") ; Profiles
+    JMap.setInt(jProfile, "lConsider", aiIndex)
+    SetMenuOptionValueST(lConsiderList[aiIndex])
+  ElseIf(option[0] == "considerCrt")
+    JMap.setInt(jProfile, "lConsiderCreature", aiIndex)
+    SetMenuOptionValueST(lConsiderListCrt[aiIndex])
+  ElseIf(option[0] == "Incest")
+    JMap.setInt(jProfile, "lIncest", aiIndex)
+    SetMenuOptionValueST(lIncestList[aiIndex])
+  ElseIf(option[0] == "AdvConAlg")
+    JMap.setInt(jProfile, "lAdvInit", aiIndex)
+    ForcePageReset()
+  ElseIf(option[0] == "reqPoints")
+    int i = option[1] as int
+    int jA = JMap.getObj(jProfile, "reqAPoints")
+    JArray.setInt(jA, i, aiIndex)
+    JMap.setObj(jProfile, "reqAPoints", jA)
+    SetMenuOptionValueST(lReqList[aiIndex])
 
-	ElseIf(option[0] == "locProfile")
-		int i = option[1] as int
-		lProfiles[i] = smmProfiles[aiIndex]
-		SetMenuOptionValueST(lProfiles[i])
-	EndIf
+  ElseIf(option[0] == "locProfile") ; Location
+    int i = option[1] as int
+    lProfiles[i] = smmProfiles[aiIndex]
+    SetMenuOptionValueST(lProfiles[i])
+  EndIf
 EndEvent
 
 ; ===============================================================
-; =============================	HIGHLIGHTS
+; =============================  HIGHLIGHTS
 ; ===============================================================
 Event OnHighlightST()
-	String[] option = PapyrusUtil.StringSplit(GetState(), "_")
-	If(option[0] == "consider") ; Profiles
-		SetInfoText("$SMM_ConsiderHighlight")
-	ElseIf(option[0] == "considerCrt")
-		SetInfoText("$SMM_ConsiderCrtHighlight")
-	EndIf
+  String[] option = PapyrusUtil.StringSplit(GetState(), "_")
+  If(option[0] == "combatSkip") ; Profile
+    SetInfoText("$SMM_combatSkipHighlight")
+  ElseIf(option[0] == "EngageChance")
+    SetInfoText("$SMM_EngageChanceHighlight")
+  ElseIf(option[0] == "EngageTimeMin")
+    SetInfoText("$SMM_EngageTimeMinHighlight")
+  ElseIf(option[0] == "EngageTimeMax")
+    SetInfoText("$SMM_EngageTimeMaxHighlight")
+  ElseIf(option[0] == "EngageCooldown")
+    SetInfoText("$SMM_EngageCooldownHighlight")
+  ElseIf(option[0] == "NonConsent")
+    SetInfoText("$SMM_NonConsentHighlight")
+  ElseIf(option[0] == "Distance")
+    SetInfoText("$SMM_DistanceHighlight")
+  ElseIf(option[0] == "LineOfSight")
+    SetInfoText("$SMM_LineOfSightHighlight")
+  ElseIf(option[0] == "Disposition")
+    SetInfoText("$SMM_DispositionHighlight")
+  ElseIf(option[0] == "Incest")
+    SetInfoText("$SMM_IncestHighlight")
+  ElseIf(option[0] == "consider")
+    SetInfoText("$SMM_ConsiderHighlight")
+  ElseIf(option[0] == "considerCrt")
+    SetInfoText("$SMM_ConsiderCrtHighlight")
+  ElseIf(option[0] == "considerPlayer")
+    SetInfoText("$SMM_ConsiderPlayerHighlight")
+  ElseIf(option[0] == "considerFollower")
+    SetInfoText("$SMM_ConsiderFollowerHighlight")
+  ElseIf(option[0] == "ArousalInit")
+    SetInfoText("$SMM_ArousalInitHighlight")
+  ElseIf(option[0] == "ArousalInitPl")
+    SetInfoText("$SMM_ArousalInitPlHighlight")
+  ElseIf(option[0] == "ArousalInitFol")
+    SetInfoText("$SMM_ArousalInitFolHighlight")
+  ElseIf(option[0] == "GenderInit")
+    SetInfoText("$SMM_GenderAllowInitHighlight_" + option[1])
+  ElseIf(option[0] == "ArousalPartner")
+    SetInfoText("$SMM_ArousalPartnerHighlight")
+  ElseIf(option[0] == "ArousalPartnerFol")
+    SetInfoText("$SMM_ArousalPartnerFolHighlight")
+  ElseIf(option[0] == "GenderPartner")
+    SetInfoText("$SMM_GenderAllowPartnerHighlight_" + option[1])
+  ElseIf(option[0] == "InitHealth")
+    SetInfoText("$SMM_HealthThreshHighlight")
+  ElseIf(option[0] == "InitStamina")
+    SetInfoText("$SMM_StaminaThreshHighlight")
+  ElseIf(option[0] == "InitMagicka")
+    SetInfoText("$SMM_MagickaThreshHighlight")
+  ElseIf(option[0] == "ReqPointsBase")
+    SetInfoText("$SMM_ReqPointsHighlight")
+  ElseIf(option[0] == "chanceBase")
+    SetInfoText("$SMM_BaseChanceHighlight")
+  ElseIf(option[0] == "reqPoints" || option[0] == "aChances")
+    SetInfoText("$SMM_AdvConHighlight_" + option[1])
+  EndIf
 EndEvent
 
 ; ===============================================================
-; =============================	FULL STATES
+; =============================  FULL STATES
 ; ===============================================================
 
 State Enabled
-	Event OnSelectST()
-		bPaused = !bPaused
-		SetToggleOptionValueST(bPaused)
-		PlayerScr.ContinueScan()
-	EndEvent
+  Event OnSelectST()
+    bPaused = !bPaused
+    SetToggleOptionValueST(bPaused)
+    PlayerScr.ContinueScan()
+  EndEvent
 EndState
 State PauseKey
-	Event OnKeyMapChangeST(int newKeyCode, string conflictControl, string conflictName)
-		If(newKeyCode == 1) ; Esc
-			PlayerScr.UnregisterForKey(iPauseKey)
-			iPauseKey = -1
-			SetKeyMapOptionValueST(iPauseKey)
-			return
-		EndIf
-		bool continue = true
-		If(conflictControl != "")
-			string msg
-			If(conflictName != "")
-				msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n(" + conflictName + ")\n\nAre you sure you want to continue?"
-			else
-				msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n\nAre you sure you want to continue?"
-			EndIf
-			continue = ShowMessage(msg, true, "$Yes", "$No")
-		EndIf
-			If(continue)
-				iPauseKey = newKeyCode
-				SetKeyMapOptionValueST(iPauseKey)
-				PlayerScr.ResetKey(iPauseKey)
-			EndIf
-		EndEvent
-	Event OnDefaultST()
-		iPauseKey = 47
-		SetKeyMapOptionValueST(iPauseKey)
-		PlayerScr.ResetKey(iPauseKey)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Hotkey to pause or unpause the mod.\nEsc to unset")
-	EndEvent
+  Event OnKeyMapChangeST(int newKeyCode, string conflictControl, string conflictName)
+    If(newKeyCode == 1) ; Esc
+      PlayerScr.UnregisterForKey(iPauseKey)
+      iPauseKey = -1
+      SetKeyMapOptionValueST(iPauseKey)
+      return
+    EndIf
+    bool continue = true
+    If(conflictControl != "")
+      string msg
+      If(conflictName != "")
+        msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n(" + conflictName + ")\n\nAre you sure you want to continue?"
+      else
+        msg = "This key is already mapped to:\n\"" + conflictControl + "\"\n\nAre you sure you want to continue?"
+      EndIf
+      continue = ShowMessage(msg, true, "$Yes", "$No")
+    EndIf
+      If(continue)
+        iPauseKey = newKeyCode
+        SetKeyMapOptionValueST(iPauseKey)
+        PlayerScr.ResetKey(iPauseKey)
+      EndIf
+    EndEvent
+  Event OnDefaultST()
+    iPauseKey = 47
+    SetKeyMapOptionValueST(iPauseKey)
+    PlayerScr.ResetKey(iPauseKey)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Hotkey to pause or unpause the mod.\nEsc to unset")
+  EndEvent
 EndState
 
 ; ===============================================================
-; =============================	PROFILE SYSTEM
+; =============================  PROFILE SYSTEM
 ; ===============================================================
 Function SaveJson()
-	JValue.writeToFile(jProfile, filePath + smmProfiles[smmProfileIndex] + ".json")
-	jProfile = JValue.release(jProfile)
+  JValue.writeToFile(jProfile, filePath + smmProfiles[smmProfileIndex] + ".json")
+  jProfile = JValue.release(jProfile)
 EndFunction
 
 Function CreateMenuProfiles(int append0 = 0)
-	int jFiles = JValue.readFromDirectory(filePath)
-	String[] files = JMap.allKeysPArray(jFiles)
-	JValue.zeroLifetime(jFiles)
-	smmProfiles = Utility.CreateStringArray(files.length + append0)
-	If(append0 == 1)
-		smmProfiles[0] = "$SMM_Disabled"
-	EndIf
-	int i = 0
-	While(i < files.length)
-		smmProfiles[i + append0] = StringUtil.SubString(files[i], 0, StringUtil.GetLength(files[i]) - 5)
-		i += 1
-	EndWhile
+  int jFiles = JValue.readFromDirectory(filePath)
+  String[] files = JMap.allKeysPArray(jFiles)
+  JValue.zeroLifetime(jFiles)
+  smmProfiles = Utility.CreateStringArray(files.length + append0)
+  If(append0 == 1)
+    smmProfiles[0] = "$SMM_Disabled"
+  EndIf
+  int i = 0
+  While(i < files.length)
+    smmProfiles[i + append0] = StringUtil.SubString(files[i], 0, StringUtil.GetLength(files[i]) - 5)
+    i += 1
+  EndWhile
 EndFunction
 
 State smmProfilesAdd
-	Event OnInputOpenST()
-		SetInputDialogStartText("Profile")
-	EndEvent
-	Event OnInputAcceptST(string a_input)
-		String profileName
-		int t = StringUtil.GetLength(a_input) - 5
-		If(StringUtil.SubString(a_input, t) != ".json")
-			profileName = a_input
-			a_input += ".json"
-		Else
-			profileName = StringUtil.Substring(a_input, 0, t)
-		EndIf
-		If(StringUtil.GetLength(profileName) < 1)
-			ShowMessage("$SMM_AddProfileError", false, "$SMM_Ok")
-			return
-		ElseIf(smmProfiles.Find(profileName) != -1)
-			If(!ShowMessage("$SMM_AddProfileDuplica", true, "$SMM_Yes", "$SMM_Cancel"))
-				return
-			EndIf
-		EndIf
-		SaveJson()
-		int newFile = JValue.readFromFile(filePath + "Definition\\Definition.json")
-		JValue.writeToFile(JValue.zeroLifetime(newFile), filePath + a_input)
-		CreateMenuProfiles()
-		smmProfileIndex = smmProfiles.Find(profileName)
-		ForcePageReset()
-	EndEvent
+  Event OnInputOpenST()
+    SetInputDialogStartText("Profile")
+  EndEvent
+  Event OnInputAcceptST(string a_input)
+    String profileName
+    int t = StringUtil.GetLength(a_input) - 5
+    If(StringUtil.SubString(a_input, t) != ".json")
+      profileName = a_input
+      a_input += ".json"
+    Else
+      profileName = StringUtil.Substring(a_input, 0, t)
+    EndIf
+    If(StringUtil.GetLength(profileName) < 1)
+      ShowMessage("$SMM_AddProfileError", false, "$SMM_Ok")
+      return
+    ElseIf(smmProfiles.Find(profileName) != -1)
+      If(!ShowMessage("$SMM_AddProfileDuplica", true, "$SMM_Yes", "$SMM_Cancel"))
+        return
+      EndIf
+    EndIf
+    SaveJson()
+    int newFile = JValue.readFromFile(filePath + "Definition\\Definition.json")
+    JValue.writeToFile(JValue.zeroLifetime(newFile), filePath + a_input)
+    CreateMenuProfiles()
+    smmProfileIndex = smmProfiles.Find(profileName)
+    ForcePageReset()
+  EndEvent
 EndState
 
 State smmProfilesLoad
-	Event OnMenuOpenST()
-		SetMenuDialogStartIndex(smmProfileIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(smmProfiles)
-	EndEvent
-	Event OnMenuAcceptST(Int aiIndex)
-		SaveJson()
-		smmProfileIndex = aiIndex
-		ForcePageReset()
-	EndEvent
-	Event OnDefaultST()
-		smmProfileIndex = 1
-		ForcePageReset()
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("$SMM_ProfileLoadHighlight")
-	EndEvent
+  Event OnMenuOpenST()
+    SetMenuDialogStartIndex(smmProfileIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(smmProfiles)
+  EndEvent
+  Event OnMenuAcceptST(Int aiIndex)
+    SaveJson()
+    smmProfileIndex = aiIndex
+    ForcePageReset()
+  EndEvent
+  Event OnDefaultST()
+    smmProfileIndex = 1
+    ForcePageReset()
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("$SMM_ProfileLoadHighlight")
+  EndEvent
 EndState
 
+; =============================================================
+; ===================================== MISC UTILITY
+; =============================================================
+int Function getFlag(bool option)
+	If(option)
+		return OPTION_FLAG_NONE
+	else
+		return OPTION_FLAG_DISABLED
+	EndIf
+endFunction
+
+
 ;/ =============================================================
-; ===================================== TOGGLE & TEXT
-; =============================================================
-Event OnSelectST()
-	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
-	If(options[0] == "Enabled") ; General
-		Player.bPaused = !Player.bPaused
-		SetToggleOptionValueST(!Player.bPaused)
-		If(Player.bPaused)
-			Player.UnregisterForUpdate()
-		else
-			Player.RegisterForSingleUpdate(iTickIntervall)
-		EndIf
-	ElseIf(options[0] == "AllowHostile")
-		bAllowHostile = !bAllowHostile
-		SetToggleOptionValueST(bAllowHostile)
-	ElseIf(options[0] == "AllowCreatures")
-		bAllowCreatures = !bAllowCreatures
-		SetToggleOptionValueST(bAllowCreatures)
-
-	ElseIf(options[0] == "LocReadMe") ; Read Mes
-		ShowMessage("$SMM_LocReadMe", false, "$SMM_OK")
-	EndIf
-EndEvent
-
-; =============================================================
-; ===================================== SLIDER
-; =============================================================
-Event OnSliderOpenST()
-	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
-	If(options[0] == "TickInterval") ; General
-		SetSliderDialogStartValue(iTickIntervall)
-		SetSliderDialogDefaultValue(15)
-		SetSliderDialogRange(5, 300)
-		SetSliderDialogInterval(1)
-	EndIf
-
-EndEvent
-
-Event OnSliderAcceptST(float value)
-	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
-	If(options[0] == "TickInterval") ; General
-		iTickIntervall = value as int
-		SetSliderOptionValueST(iTickIntervall)
-	EndIf
-
-EndEvent
-
-; =============================================================
-; ===================================== MENU
-; =============================================================
-Event OnMenuOpenST()
-	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
-	If(options[0] == "location") ; Location
-		int i = options[1] as int
-		SetMenuDialogStartIndex(locationTable[i])
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(profiles)
-	EndIf
-EndEvent
-
-Event OnMenuAcceptST(int index)
-	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
-	If(options[0] == "location") ; Location
-		int i = options[1] as int
-		locationTable[i] = index
-		SetMenuOptionValueST(profiles[i])
-	EndIf
-EndEvent
-
-; =============================================================
-; ===================================== HIGHLIGHT
-; =============================================================
-Event OnHighlightST()
-	string[] options = PapyrusUtil.StringSplit(GetState(), "_")
-	If(options[0] == "Enabled") ; General
-		SetInfoText("$SMM_EnabledHighlight")
-	ElseIf(options[0] == "TickInterval")
-		SetInfoText("$SMM_IntervalHighlight")
-	ElseIf(options[0] == "AllowHostile")
-		SetInfoText("$SMM_AllowHostileHighlight")
-	ElseIf(options[0] == "AllowCreatures")
-		SetInfoText("$SMM_AllowCreaturesHighlight")
-	EndIf
-EndEvent
-
-; =============================================================
 ; ===================================== STATES
 ; =============================================================
 Event OnPageReset(string Page)
@@ -426,191 +880,168 @@ Event OnPageReset(string Page)
   EndIf
   If(Page == " General")
 
-		AddHeaderOption(" SexLab")
+    AddHeaderOption(" SexLab")
     AddToggleOptionST("TreatVictim", "Treat as Victim", bTreatAsVictim)
     AddSliderOptionST("MaxActor", "Maximum allowed Actors in a Scene", iMaxActor)
     AddSliderOptionST("Twosome", "Twosome Weight", iTwoCh, "{0}")
     AddSliderOptionST("Threesome", "Threesome Weight", iThreeCh, "{0}", CheckFlag3p())
     AddSliderOptionST("Foursome", "Foursome Weight", iFourCh, "{0}", CheckFlag4p())
     AddSliderOptionST("Fivesome", "Fivesome Weight", iFiveCh, "{0}", CheckFlag5p())
-		AddToggleOptionST("Notify", "Notification when Engage happens?", bNotify)
-		AddToggleOptionST("SupportFilter", "More Filter Options", bSupportFilter)
+    AddToggleOptionST("Notify", "Notification when Engage happens?", bNotify)
+    AddToggleOptionST("SupportFilter", "More Filter Options", bSupportFilter)
     AddToggleOptionST("UseBed", "Use bed in friendly Locations?", bUseBed)
     SetCursorPosition(1)
-		AddHeaderOption(" Tagging")
-		AddTextOptionST("ReadMeTagging", "Read Me", none)
-		AddToggleOptionST("UseAggressiveAnim", "Use Aggressive Animations", bUseAggressive)
-		AddEmptyOption()
-		o2PFemaleMale = AddInputOption("2P: Female/Male", s2PFM)
-		o2PMaleFemale = AddInputOption("2P: Male/Female", s2PMF)
-		o2PFemaleFemale = AddInputOption("2P: Female/Female", s2PFF)
-		o2PMaleMale = AddInputOption("2P: Male/Male", s2PMM)
-		o3PFemaleFirst = AddInputOption("3P: Female Victim", s3PF)
-		o3PMaleFirst = AddInputOption("3P: Male Victim", s3PM)
-		o4PFemaleFirst = AddInputOption("4P: Female Victim", s4PM)
-		o4PMaleFirst = AddInputOption("4P: Male Victim", s4PF)
-		o5PFemaleFirst = AddInputOption("5P: Female Victim", s5PM)
-		o5PMaleFirst = AddInputOption("5P: Male Victim", s5PF)
+    AddHeaderOption(" Tagging")
+    AddTextOptionST("ReadMeTagging", "Read Me", none)
+    AddToggleOptionST("UseAggressiveAnim", "Use Aggressive Animations", bUseAggressive)
     AddEmptyOption()
-		AddHeaderOption(" Debug")
-		AddToggleOptionST("PrintTraces", "Print Traces", bPrintTraces)
+    o2PFemaleMale = AddInputOption("2P: Female/Male", s2PFM)
+    o2PMaleFemale = AddInputOption("2P: Male/Female", s2PMF)
+    o2PFemaleFemale = AddInputOption("2P: Female/Female", s2PFF)
+    o2PMaleMale = AddInputOption("2P: Male/Male", s2PMM)
+    o3PFemaleFirst = AddInputOption("3P: Female Victim", s3PF)
+    o3PMaleFirst = AddInputOption("3P: Male Victim", s3PM)
+    o4PFemaleFirst = AddInputOption("4P: Female Victim", s4PM)
+    o4PMaleFirst = AddInputOption("4P: Male Victim", s4PF)
+    o5PFemaleFirst = AddInputOption("5P: Female Victim", s5PM)
+    o5PMaleFirst = AddInputOption("5P: Male Victim", s5PF)
+    AddEmptyOption()
+    AddHeaderOption(" Debug")
+    AddToggleOptionST("PrintTraces", "Print Traces", bPrintTraces)
 
   ElseIf(Page == " Profiles" && ProfileViewerList[ProfileViewerIndex] == " Sheep")
     AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
     SheepProfile()
-	ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Wolf")
-		AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
-		WolfProfile()
-	ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Bunny")
-		AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
-		BunnyProfile()
-	ElseIf(Page == " Filter")
-		SetCursorFillMode(LEFT_TO_RIGHT)
-		AddHeaderOption(" The Player can be engaged by..")
-		AddTextOptionST("ReadMeFilter", "", "READ ME")
-		oMaleFollowerPlayer = AddToggleOption("Followers: Male", bMalFolAssPl)
-		oMaleNPCPlayer = AddToggleOption("NPC: Male", bAssMalPl)
-		oFemaleFollowerPlayer = AddToggleOption("Followers: Female", bFemFolAssPl)
-		oFemaleNPCPlayer = AddToggleOption("NPC: Female", bAssFemPl)
-		oCreatureMaleFollowerPlayer = AddToggleOption("Pets", bCrMFolAssPl)
-		oCreatureMaleNPCPlayer = AddToggleOption("Creatures", bAssMalCrPl)
-		If(bSupportFilter)
-			oFutaFollowerPlayer = AddToggleOption("Followers: Futa", bFutFolAssPl)
-			oFutaNPCPlayer = AddToggleOption("NPC: Futa", bAssFutPl)
-			oCreatureFemaleFollowerPlayer = AddToggleOption("Pets (Female)", bCrFFolAssPl)
-			oCreatureFemaleNPCPlayer = AddToggleOption("Creatures (Female)", bAssFemCrPl)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Followers can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerFollower = AddToggleOption("Followers: Male", bMalFolAssFol)
-		oMaleNPCFollower = AddToggleOption("NPC: Male", bAssMalFol)
-		oFemaleFollowerFollower = AddToggleOption("Followers: Female", bFemFolAssFol)
-		oFemaleNPCFollower = AddToggleOption("NPC: Female", bAssFemFol)
-		oCreatureMaleFollowerFollower = AddToggleOption("Pets", bCrMFolAssFol)
-		oCreatureMaleNPCFollower = AddToggleOption("Creatures", bAssMalCrFol)
-		If(bSupportFilter)
-			oFutaFollowerFollower = AddToggleOption("Followers: Futa", bFutFolAssFol)
-			oFutaNPCFollower = AddToggleOption("NPC: Futa", bAssFutFol)
-			oCreatureFemaleFollowerFollower = AddToggleOption("Pets (Female)", bCrFFolAssFol)
-			oCreatureFemaleNPCFollower = AddToggleOption("Creature (Female)", bAssFemCrFol)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Male NPC can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerMale = AddToggleOption("Followers: Male", bMalFolAssMal)
-		oMaleNPCMale = AddToggleOption("NPC: Male", bAssMalMal)
-		oFemaleFollowerMale = AddToggleOption("Followers: Female", bFemFolAssMal)
-		oFemaleNPCMale = AddToggleOption("NPC: Female", bAssFemMal)
-		oCreatureMaleFollowerMale = AddToggleOption("Pets", bCrMFolAssMal)
-		oCreatureMaleNPCMale = AddToggleOption("Creatures", bAssMalCrMal)
-		If(bSupportFilter)
-			oFutaFollowerMale = AddToggleOption("Followers: Futa", bFutFolAssMal)
-			oFutaNPCMale = AddToggleOption("NPC: Futa", bAssFutMal)
-			oCreatureFemaleFollowerMale = AddToggleOption("Pets (Female)", bCrFFolAssMal)
-			oCreatureFemaleNPCMale = AddToggleOption("Creatures (Female)", bAssFemCrMal)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Female NPC can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerFemale = AddToggleOption("Followers: Male", bMalFolAssFem)
-		oMaleNPCFemale = AddToggleOption("NPC: Male", bAssMalFem)
-		oFemaleFollowerFemale = AddToggleOption("Followers: Female", bFemFolAssFem)
-		oFemaleNPCFemale = AddToggleOption("NPC: Female", bAssFemFem)
-		oCreatureMaleFollowerFemale = AddToggleOption("Pets", bCrMFolAssFem)
-		oCreatureMaleNPCFemale = AddToggleOption("Creatures", bAssMalCrFem)
-		If(bSupportFilter)
-			oFutaFollowerFemale = AddToggleOption("Followers: Futa", bFutFolAssFem)
-			oFutaNPCFemale = AddToggleOption("NPC: Futa", bAssFutFem)
-			oCreatureFemaleFollowerFemale = AddToggleOption("Pets (Female)", bCrFFolAssFem)
-			oCreatureFemaleNPCFemale = AddToggleOption("Creatures (Female)", bAssFemCrFem)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Creatures can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerCreatureMale = AddToggleOption("Followers: Male", bMalFolAssCrM)
-		oMaleNPCCreatureMale = AddToggleOption("NPC: Male", bAssMalCreat)
-		oFemaleFollowerCreatureMale = AddToggleOption("Followers: Female", bFemFolAssCrM)
-		oFemaleNPCCreatureMale = AddToggleOption("NPC: Female", bAssFemCreat)
-		oCreatureMaleFollowerCreatureMale = AddToggleOption("Pets", bCrMFolAssCrM)
-		oCreatureMaleNPCCreatureMale = AddToggleOption("Creatures", bAssMalCrCreat)
-		If(bSupportFilter)
-			oFutaFollowerCreatureMale = AddToggleOption("Followers: Futa", bFutFolAssCrM)
-			oFutaNPCCreatureMale = AddToggleOption("NPC: Futa", bAssFutCreat)
-			oCreatureFemaleFollowerCreatureMale = AddToggleOption("Pets (Female)", bCrFFolAssCrM)
-			oCreatureFemaleNPCCreatureMale = AddToggleOption("Creatures (Female)", bAssFemCrCreat)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		If(bSupportFilter)
-			AddHeaderOption(" Futa NPC can be engaged by..")
-			AddEmptyOption()
-			oMaleFollowerFuta = AddToggleOption("Followers: Male", bMalFolAssFut)
-			oMaleNPCFuta = AddToggleOption("NPC: Male", bAssMalFut)
-			oFemaleFollowerFuta = AddToggleOption("Followers: Female", bFemFolAssFut)
-			oFemaleNPCFuta = AddToggleOption("NPC: Female", bAssFemFut)
-			oCreatureMaleFollowerFuta = AddToggleOption("Pets", bCrMFolAssFut)
-			oCreatureMaleNPCFuta = AddToggleOption("Creatures", bAssMalCrFut)
-			; If(bSupportFilter)
-			oFutaFollowerFuta = AddToggleOption("Followers: Futa", bFutFolAssFut)
-			oFutaNPCFuta = AddToggleOption("NPC: Futa", bAssFutFut)
-			oCreatureFemaleFollowerFuta = AddToggleOption("Pets (Female)", bCrFFolAssFut)
-			oCreatureFemaleNPCFuta = AddToggleOption("Creatures (Female)", bAssFemCrFut)
-			; EndIf
-			AddEmptyOption()
-			AddEmptyOption()
-			; --------------------------------------------------------
-			AddHeaderOption(" Creatures (Female) can be engaged by..")
-			AddEmptyOption()
-			oMaleFollowerCreatureFemale = AddToggleOption("Followers: Male", bMalFolAssCrF)
-			oMaleNPCCreatureFemale = AddToggleOption("NPC: Male", bAssMalFemCreat)
-			oFemaleFollowerCreatureFemale = AddToggleOption("Followers: Female", bFemFolAssCrF)
-			oFemaleNPCCreatureFemale = AddToggleOption("NPC: Female", bAssFemFemCreat)
-			oCreatureMaleFollowerCreatureFemale = AddToggleOption("Pets", bCrMFolAssCrF)
-			oCreatureMaleNPCCreatureFemale = AddToggleOption("Creatures", bAssMalCrFemCreat)
-			; If(bSupportFilter)
-			oFutaFollowerCreatureFemale = AddToggleOption("Followers: Futa", bFutFolAssCrF)
-			oFutaNPCCreatureFemale = AddToggleOption("NPC: Futa", bAssFutFemCreat)
- 			oCreatureFemaleFollowerCreatureFemale = AddToggleOption("Pets (Female)", bCrFFolAssCrF)
-			oCreatureFemaleNPCCreatureFemale = AddToggleOption("Creatures (Female)", bAssFemCrFemCreat)
-			; EndIf
-		ElseIf(Page == " SexLab")
+  ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Wolf")
+    AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
+    WolfProfile()
+  ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Bunny")
+    AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
+    BunnyProfile()
+  ElseIf(Page == " Filter")
+    SetCursorFillMode(LEFT_TO_RIGHT)
+    AddHeaderOption(" The Player can be engaged by..")
+    AddTextOptionST("ReadMeFilter", "", "READ ME")
+    oMaleFollowerPlayer = AddToggleOption("Followers: Male", bMalFolAssPl)
+    oMaleNPCPlayer = AddToggleOption("NPC: Male", bAssMalPl)
+    oFemaleFollowerPlayer = AddToggleOption("Followers: Female", bFemFolAssPl)
+    oFemaleNPCPlayer = AddToggleOption("NPC: Female", bAssFemPl)
+    oCreatureMaleFollowerPlayer = AddToggleOption("Pets", bCrMFolAssPl)
+    oCreatureMaleNPCPlayer = AddToggleOption("Creatures", bAssMalCrPl)
+    If(bSupportFilter)
+      oFutaFollowerPlayer = AddToggleOption("Followers: Futa", bFutFolAssPl)
+      oFutaNPCPlayer = AddToggleOption("NPC: Futa", bAssFutPl)
+      oCreatureFemaleFollowerPlayer = AddToggleOption("Pets (Female)", bCrFFolAssPl)
+      oCreatureFemaleNPCPlayer = AddToggleOption("Creatures (Female)", bAssFemCrPl)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Followers can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerFollower = AddToggleOption("Followers: Male", bMalFolAssFol)
+    oMaleNPCFollower = AddToggleOption("NPC: Male", bAssMalFol)
+    oFemaleFollowerFollower = AddToggleOption("Followers: Female", bFemFolAssFol)
+    oFemaleNPCFollower = AddToggleOption("NPC: Female", bAssFemFol)
+    oCreatureMaleFollowerFollower = AddToggleOption("Pets", bCrMFolAssFol)
+    oCreatureMaleNPCFollower = AddToggleOption("Creatures", bAssMalCrFol)
+    If(bSupportFilter)
+      oFutaFollowerFollower = AddToggleOption("Followers: Futa", bFutFolAssFol)
+      oFutaNPCFollower = AddToggleOption("NPC: Futa", bAssFutFol)
+      oCreatureFemaleFollowerFollower = AddToggleOption("Pets (Female)", bCrFFolAssFol)
+      oCreatureFemaleNPCFollower = AddToggleOption("Creature (Female)", bAssFemCrFol)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Male NPC can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerMale = AddToggleOption("Followers: Male", bMalFolAssMal)
+    oMaleNPCMale = AddToggleOption("NPC: Male", bAssMalMal)
+    oFemaleFollowerMale = AddToggleOption("Followers: Female", bFemFolAssMal)
+    oFemaleNPCMale = AddToggleOption("NPC: Female", bAssFemMal)
+    oCreatureMaleFollowerMale = AddToggleOption("Pets", bCrMFolAssMal)
+    oCreatureMaleNPCMale = AddToggleOption("Creatures", bAssMalCrMal)
+    If(bSupportFilter)
+      oFutaFollowerMale = AddToggleOption("Followers: Futa", bFutFolAssMal)
+      oFutaNPCMale = AddToggleOption("NPC: Futa", bAssFutMal)
+      oCreatureFemaleFollowerMale = AddToggleOption("Pets (Female)", bCrFFolAssMal)
+      oCreatureFemaleNPCMale = AddToggleOption("Creatures (Female)", bAssFemCrMal)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Female NPC can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerFemale = AddToggleOption("Followers: Male", bMalFolAssFem)
+    oMaleNPCFemale = AddToggleOption("NPC: Male", bAssMalFem)
+    oFemaleFollowerFemale = AddToggleOption("Followers: Female", bFemFolAssFem)
+    oFemaleNPCFemale = AddToggleOption("NPC: Female", bAssFemFem)
+    oCreatureMaleFollowerFemale = AddToggleOption("Pets", bCrMFolAssFem)
+    oCreatureMaleNPCFemale = AddToggleOption("Creatures", bAssMalCrFem)
+    If(bSupportFilter)
+      oFutaFollowerFemale = AddToggleOption("Followers: Futa", bFutFolAssFem)
+      oFutaNPCFemale = AddToggleOption("NPC: Futa", bAssFutFem)
+      oCreatureFemaleFollowerFemale = AddToggleOption("Pets (Female)", bCrFFolAssFem)
+      oCreatureFemaleNPCFemale = AddToggleOption("Creatures (Female)", bAssFemCrFem)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Creatures can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerCreatureMale = AddToggleOption("Followers: Male", bMalFolAssCrM)
+    oMaleNPCCreatureMale = AddToggleOption("NPC: Male", bAssMalCreat)
+    oFemaleFollowerCreatureMale = AddToggleOption("Followers: Female", bFemFolAssCrM)
+    oFemaleNPCCreatureMale = AddToggleOption("NPC: Female", bAssFemCreat)
+    oCreatureMaleFollowerCreatureMale = AddToggleOption("Pets", bCrMFolAssCrM)
+    oCreatureMaleNPCCreatureMale = AddToggleOption("Creatures", bAssMalCrCreat)
+    If(bSupportFilter)
+      oFutaFollowerCreatureMale = AddToggleOption("Followers: Futa", bFutFolAssCrM)
+      oFutaNPCCreatureMale = AddToggleOption("NPC: Futa", bAssFutCreat)
+      oCreatureFemaleFollowerCreatureMale = AddToggleOption("Pets (Female)", bCrFFolAssCrM)
+      oCreatureFemaleNPCCreatureMale = AddToggleOption("Creatures (Female)", bAssFemCrCreat)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    If(bSupportFilter)
+      AddHeaderOption(" Futa NPC can be engaged by..")
+      AddEmptyOption()
+      oMaleFollowerFuta = AddToggleOption("Followers: Male", bMalFolAssFut)
+      oMaleNPCFuta = AddToggleOption("NPC: Male", bAssMalFut)
+      oFemaleFollowerFuta = AddToggleOption("Followers: Female", bFemFolAssFut)
+      oFemaleNPCFuta = AddToggleOption("NPC: Female", bAssFemFut)
+      oCreatureMaleFollowerFuta = AddToggleOption("Pets", bCrMFolAssFut)
+      oCreatureMaleNPCFuta = AddToggleOption("Creatures", bAssMalCrFut)
+      ; If(bSupportFilter)
+      oFutaFollowerFuta = AddToggleOption("Followers: Futa", bFutFolAssFut)
+      oFutaNPCFuta = AddToggleOption("NPC: Futa", bAssFutFut)
+      oCreatureFemaleFollowerFuta = AddToggleOption("Pets (Female)", bCrFFolAssFut)
+      oCreatureFemaleNPCFuta = AddToggleOption("Creatures (Female)", bAssFemCrFut)
+      ; EndIf
+      AddEmptyOption()
+      AddEmptyOption()
+      ; --------------------------------------------------------
+      AddHeaderOption(" Creatures (Female) can be engaged by..")
+      AddEmptyOption()
+      oMaleFollowerCreatureFemale = AddToggleOption("Followers: Male", bMalFolAssCrF)
+      oMaleNPCCreatureFemale = AddToggleOption("NPC: Male", bAssMalFemCreat)
+      oFemaleFollowerCreatureFemale = AddToggleOption("Followers: Female", bFemFolAssCrF)
+      oFemaleNPCCreatureFemale = AddToggleOption("NPC: Female", bAssFemFemCreat)
+      oCreatureMaleFollowerCreatureFemale = AddToggleOption("Pets", bCrMFolAssCrF)
+      oCreatureMaleNPCCreatureFemale = AddToggleOption("Creatures", bAssMalCrFemCreat)
+      ; If(bSupportFilter)
+      oFutaFollowerCreatureFemale = AddToggleOption("Followers: Futa", bFutFolAssCrF)
+      oFutaNPCCreatureFemale = AddToggleOption("NPC: Futa", bAssFutFemCreat)
+       oCreatureFemaleFollowerCreatureFemale = AddToggleOption("Pets (Female)", bCrFFolAssCrF)
+      oCreatureFemaleNPCCreatureFemale = AddToggleOption("Creatures (Female)", bAssFemCrFemCreat)
+      ; EndIf
+    ElseIf(Page == " SexLab")
 
-		EndIf
+    EndIf
   endIf
 endEvent
-
-
-
-
-int Function getFlag(bool option, bool master = true)
-	If(option && master)
-		return OPTION_FLAG_NONE
-	else
-		return OPTION_FLAG_DISABLED
-	EndIf
-EndFunction
-
-
-
-
-
-
-
-; -------------------------- Properties
-RMMPlayer Property Player Auto
-GlobalVariable Property RMM_MaxRadius Auto
-GlobalVariable Property RMM_AllowHostiles Auto
-GlobalVariable Property RMM_AllowCreatures Auto
 
 ; -------------------------- Variables
 ; -- General
@@ -1065,38 +1496,38 @@ int oCreatureFemaleNPCCreatureFemale
 
 ; -------------------------- Code
 int Function GetVersion()
-	return 1
+  return 1
 endFunction
 
 
 Function Initialize()
-	Pages = new string[4]
-	Pages[0] = " General"
-	Pages[1] = " Locations"
-	Pages[2] = " Profiles"
-	Pages[3] = " Filter"
+  Pages = new string[4]
+  Pages[0] = " General"
+  Pages[1] = " Locations"
+  Pages[2] = " Profiles"
+  Pages[3] = " Filter"
 
-	ProfileViewerList = new string[3]
-	ProfileViewerList[0] = " Sheep"
-	ProfileViewerList[1] = " Wolf"
-	ProfileViewerList[2] = " Bunny"
+  ProfileViewerList = new string[3]
+  ProfileViewerList[0] = " Sheep"
+  ProfileViewerList[1] = " Wolf"
+  ProfileViewerList[2] = " Bunny"
 
-	ProfileList = new string[4]
-	ProfileList[0] = " Disabled"
-	ProfileList[1] = " Sheep"
-	ProfileList[2] = " Wolf"
-	ProfileList[3] = " Bunny"
+  ProfileList = new string[4]
+  ProfileList[0] = " Disabled"
+  ProfileList[1] = " Sheep"
+  ProfileList[2] = " Wolf"
+  ProfileList[3] = " Bunny"
 endFunction
 
 ; ==================================
-; 							MENU
+;               MENU
 ; ==================================
 Event OnConfigInit()
-	Initialize()
+  Initialize()
 endEvent
 
 Event OnVersionUpdate(int newVers)
-	Initialize()
+  Initialize()
 endEvent
 
 Event OnPageReset(string Page)
@@ -1113,35 +1544,35 @@ Event OnPageReset(string Page)
     AddEmptyOption()
     AddToggleOptionST("AllowHostile", "Allow Hostile NPCs/Creatures", bAllowHostiles)
     AddToggleOptionST("AllowCreatures", "Allow Creatures", bAllowCreatures)
-		AddHeaderOption(" SexLab")
+    AddHeaderOption(" SexLab")
     AddToggleOptionST("TreatVictim", "Treat as Victim", bTreatAsVictim)
     AddSliderOptionST("MaxActor", "Maximum allowed Actors in a Scene", iMaxActor)
     AddSliderOptionST("Twosome", "Twosome Weight", iTwoCh, "{0}")
     AddSliderOptionST("Threesome", "Threesome Weight", iThreeCh, "{0}", CheckFlag3p())
     AddSliderOptionST("Foursome", "Foursome Weight", iFourCh, "{0}", CheckFlag4p())
     AddSliderOptionST("Fivesome", "Fivesome Weight", iFiveCh, "{0}", CheckFlag5p())
-		AddToggleOptionST("Notify", "Notification when Engage happens?", bNotify)
-		AddToggleOptionST("SupportFilter", "More Filter Options", bSupportFilter)
+    AddToggleOptionST("Notify", "Notification when Engage happens?", bNotify)
+    AddToggleOptionST("SupportFilter", "More Filter Options", bSupportFilter)
     AddToggleOptionST("UseBed", "Use bed in friendly Locations?", bUseBed)
     SetCursorPosition(1)
-		AddHeaderOption(" Tagging")
-		AddTextOptionST("ReadMeTagging", "Read Me", none)
-		AddToggleOptionST("UseAggressiveAnim", "Use Aggressive Animations", bUseAggressive)
-		AddEmptyOption()
-		o2PFemaleMale = AddInputOption("2P: Female/Male", s2PFM)
-		o2PMaleFemale = AddInputOption("2P: Male/Female", s2PMF)
-		o2PFemaleFemale = AddInputOption("2P: Female/Female", s2PFF)
-		o2PMaleMale = AddInputOption("2P: Male/Male", s2PMM)
-		o3PFemaleFirst = AddInputOption("3P: Female Victim", s3PF)
-		o3PMaleFirst = AddInputOption("3P: Male Victim", s3PM)
-		o4PFemaleFirst = AddInputOption("4P: Female Victim", s4PM)
-		o4PMaleFirst = AddInputOption("4P: Male Victim", s4PF)
-		o5PFemaleFirst = AddInputOption("5P: Female Victim", s5PM)
-		o5PMaleFirst = AddInputOption("5P: Male Victim", s5PF)
+    AddHeaderOption(" Tagging")
+    AddTextOptionST("ReadMeTagging", "Read Me", none)
+    AddToggleOptionST("UseAggressiveAnim", "Use Aggressive Animations", bUseAggressive)
     AddEmptyOption()
-		AddHeaderOption(" Debug")
-		AddKeyMapOptionST("PauseKey", "Pause/Unpause Hotkey", iPauseKey)
-		AddToggleOptionST("PrintTraces", "Print Traces", bPrintTraces)
+    o2PFemaleMale = AddInputOption("2P: Female/Male", s2PFM)
+    o2PMaleFemale = AddInputOption("2P: Male/Female", s2PMF)
+    o2PFemaleFemale = AddInputOption("2P: Female/Female", s2PFF)
+    o2PMaleMale = AddInputOption("2P: Male/Male", s2PMM)
+    o3PFemaleFirst = AddInputOption("3P: Female Victim", s3PF)
+    o3PMaleFirst = AddInputOption("3P: Male Victim", s3PM)
+    o4PFemaleFirst = AddInputOption("4P: Female Victim", s4PM)
+    o4PMaleFirst = AddInputOption("4P: Male Victim", s4PF)
+    o5PFemaleFirst = AddInputOption("5P: Female Victim", s5PM)
+    o5PMaleFirst = AddInputOption("5P: Male Victim", s5PF)
+    AddEmptyOption()
+    AddHeaderOption(" Debug")
+    AddKeyMapOptionST("PauseKey", "Pause/Unpause Hotkey", iPauseKey)
+    AddToggleOptionST("PrintTraces", "Print Traces", bPrintTraces)
   ElseIf(Page == " Locations")
     AddTextOptionST("LocReadMe", "Read me", none)
     AddHeaderOption("Neutral Locations")
@@ -1169,134 +1600,134 @@ Event OnPageReset(string Page)
   ElseIf(Page == " Profiles" && ProfileViewerList[ProfileViewerIndex] == " Sheep")
     AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
     SheepProfile()
-	ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Wolf")
-		AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
-		WolfProfile()
-	ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Bunny")
-		AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
-		BunnyProfile()
-	ElseIf(Page == " Filter")
-		SetCursorFillMode(LEFT_TO_RIGHT)
-		AddHeaderOption(" The Player can be engaged by..")
-		AddTextOptionST("ReadMeFilter", "", "READ ME")
-		oMaleFollowerPlayer = AddToggleOption("Followers: Male", bMalFolAssPl)
-		oMaleNPCPlayer = AddToggleOption("NPC: Male", bAssMalPl)
-		oFemaleFollowerPlayer = AddToggleOption("Followers: Female", bFemFolAssPl)
-		oFemaleNPCPlayer = AddToggleOption("NPC: Female", bAssFemPl)
-		oCreatureMaleFollowerPlayer = AddToggleOption("Pets", bCrMFolAssPl)
-		oCreatureMaleNPCPlayer = AddToggleOption("Creatures", bAssMalCrPl)
-		If(bSupportFilter)
-			oFutaFollowerPlayer = AddToggleOption("Followers: Futa", bFutFolAssPl)
-			oFutaNPCPlayer = AddToggleOption("NPC: Futa", bAssFutPl)
-			oCreatureFemaleFollowerPlayer = AddToggleOption("Pets (Female)", bCrFFolAssPl)
-			oCreatureFemaleNPCPlayer = AddToggleOption("Creatures (Female)", bAssFemCrPl)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Followers can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerFollower = AddToggleOption("Followers: Male", bMalFolAssFol)
-		oMaleNPCFollower = AddToggleOption("NPC: Male", bAssMalFol)
-		oFemaleFollowerFollower = AddToggleOption("Followers: Female", bFemFolAssFol)
-		oFemaleNPCFollower = AddToggleOption("NPC: Female", bAssFemFol)
-		oCreatureMaleFollowerFollower = AddToggleOption("Pets", bCrMFolAssFol)
-		oCreatureMaleNPCFollower = AddToggleOption("Creatures", bAssMalCrFol)
-		If(bSupportFilter)
-			oFutaFollowerFollower = AddToggleOption("Followers: Futa", bFutFolAssFol)
-			oFutaNPCFollower = AddToggleOption("NPC: Futa", bAssFutFol)
-			oCreatureFemaleFollowerFollower = AddToggleOption("Pets (Female)", bCrFFolAssFol)
-			oCreatureFemaleNPCFollower = AddToggleOption("Creature (Female)", bAssFemCrFol)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Male NPC can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerMale = AddToggleOption("Followers: Male", bMalFolAssMal)
-		oMaleNPCMale = AddToggleOption("NPC: Male", bAssMalMal)
-		oFemaleFollowerMale = AddToggleOption("Followers: Female", bFemFolAssMal)
-		oFemaleNPCMale = AddToggleOption("NPC: Female", bAssFemMal)
-		oCreatureMaleFollowerMale = AddToggleOption("Pets", bCrMFolAssMal)
-		oCreatureMaleNPCMale = AddToggleOption("Creatures", bAssMalCrMal)
-		If(bSupportFilter)
-			oFutaFollowerMale = AddToggleOption("Followers: Futa", bFutFolAssMal)
-			oFutaNPCMale = AddToggleOption("NPC: Futa", bAssFutMal)
-			oCreatureFemaleFollowerMale = AddToggleOption("Pets (Female)", bCrFFolAssMal)
-			oCreatureFemaleNPCMale = AddToggleOption("Creatures (Female)", bAssFemCrMal)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Female NPC can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerFemale = AddToggleOption("Followers: Male", bMalFolAssFem)
-		oMaleNPCFemale = AddToggleOption("NPC: Male", bAssMalFem)
-		oFemaleFollowerFemale = AddToggleOption("Followers: Female", bFemFolAssFem)
-		oFemaleNPCFemale = AddToggleOption("NPC: Female", bAssFemFem)
-		oCreatureMaleFollowerFemale = AddToggleOption("Pets", bCrMFolAssFem)
-		oCreatureMaleNPCFemale = AddToggleOption("Creatures", bAssMalCrFem)
-		If(bSupportFilter)
-			oFutaFollowerFemale = AddToggleOption("Followers: Futa", bFutFolAssFem)
-			oFutaNPCFemale = AddToggleOption("NPC: Futa", bAssFutFem)
-			oCreatureFemaleFollowerFemale = AddToggleOption("Pets (Female)", bCrFFolAssFem)
-			oCreatureFemaleNPCFemale = AddToggleOption("Creatures (Female)", bAssFemCrFem)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		AddHeaderOption(" Creatures can be engaged by..")
-		AddEmptyOption()
-		oMaleFollowerCreatureMale = AddToggleOption("Followers: Male", bMalFolAssCrM)
-		oMaleNPCCreatureMale = AddToggleOption("NPC: Male", bAssMalCreat)
-		oFemaleFollowerCreatureMale = AddToggleOption("Followers: Female", bFemFolAssCrM)
-		oFemaleNPCCreatureMale = AddToggleOption("NPC: Female", bAssFemCreat)
-		oCreatureMaleFollowerCreatureMale = AddToggleOption("Pets", bCrMFolAssCrM)
-		oCreatureMaleNPCCreatureMale = AddToggleOption("Creatures", bAssMalCrCreat)
-		If(bSupportFilter)
-			oFutaFollowerCreatureMale = AddToggleOption("Followers: Futa", bFutFolAssCrM)
-			oFutaNPCCreatureMale = AddToggleOption("NPC: Futa", bAssFutCreat)
-			oCreatureFemaleFollowerCreatureMale = AddToggleOption("Pets (Female)", bCrFFolAssCrM)
-			oCreatureFemaleNPCCreatureMale = AddToggleOption("Creatures (Female)", bAssFemCrCreat)
-		EndIf
-		AddEmptyOption()
-		AddEmptyOption()
-		; ----------------------------------------------------------
-		If(bSupportFilter)
-			AddHeaderOption(" Futa NPC can be engaged by..")
-			AddEmptyOption()
-			oMaleFollowerFuta = AddToggleOption("Followers: Male", bMalFolAssFut)
-			oMaleNPCFuta = AddToggleOption("NPC: Male", bAssMalFut)
-			oFemaleFollowerFuta = AddToggleOption("Followers: Female", bFemFolAssFut)
-			oFemaleNPCFuta = AddToggleOption("NPC: Female", bAssFemFut)
-			oCreatureMaleFollowerFuta = AddToggleOption("Pets", bCrMFolAssFut)
-			oCreatureMaleNPCFuta = AddToggleOption("Creatures", bAssMalCrFut)
-			; If(bSupportFilter)
-			oFutaFollowerFuta = AddToggleOption("Followers: Futa", bFutFolAssFut)
-			oFutaNPCFuta = AddToggleOption("NPC: Futa", bAssFutFut)
-			oCreatureFemaleFollowerFuta = AddToggleOption("Pets (Female)", bCrFFolAssFut)
-			oCreatureFemaleNPCFuta = AddToggleOption("Creatures (Female)", bAssFemCrFut)
-			; EndIf
-			AddEmptyOption()
-			AddEmptyOption()
-			; --------------------------------------------------------
-			AddHeaderOption(" Creatures (Female) can be engaged by..")
-			AddEmptyOption()
-			oMaleFollowerCreatureFemale = AddToggleOption("Followers: Male", bMalFolAssCrF)
-			oMaleNPCCreatureFemale = AddToggleOption("NPC: Male", bAssMalFemCreat)
-			oFemaleFollowerCreatureFemale = AddToggleOption("Followers: Female", bFemFolAssCrF)
-			oFemaleNPCCreatureFemale = AddToggleOption("NPC: Female", bAssFemFemCreat)
-			oCreatureMaleFollowerCreatureFemale = AddToggleOption("Pets", bCrMFolAssCrF)
-			oCreatureMaleNPCCreatureFemale = AddToggleOption("Creatures", bAssMalCrFemCreat)
-			; If(bSupportFilter)
-			oFutaFollowerCreatureFemale = AddToggleOption("Followers: Futa", bFutFolAssCrF)
-			oFutaNPCCreatureFemale = AddToggleOption("NPC: Futa", bAssFutFemCreat)
- 			oCreatureFemaleFollowerCreatureFemale = AddToggleOption("Pets (Female)", bCrFFolAssCrF)
-			oCreatureFemaleNPCCreatureFemale = AddToggleOption("Creatures (Female)", bAssFemCrFemCreat)
-			; EndIf
-		ElseIf(Page == " SexLab")
+  ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Wolf")
+    AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
+    WolfProfile()
+  ElseIf(Page == " Profiles" &&  ProfileViewerList[ProfileViewerIndex] == " Bunny")
+    AddMenuOptionST("ProfileView", "Active Profile: ", ProfileViewerList[ProfileViewerIndex])
+    BunnyProfile()
+  ElseIf(Page == " Filter")
+    SetCursorFillMode(LEFT_TO_RIGHT)
+    AddHeaderOption(" The Player can be engaged by..")
+    AddTextOptionST("ReadMeFilter", "", "READ ME")
+    oMaleFollowerPlayer = AddToggleOption("Followers: Male", bMalFolAssPl)
+    oMaleNPCPlayer = AddToggleOption("NPC: Male", bAssMalPl)
+    oFemaleFollowerPlayer = AddToggleOption("Followers: Female", bFemFolAssPl)
+    oFemaleNPCPlayer = AddToggleOption("NPC: Female", bAssFemPl)
+    oCreatureMaleFollowerPlayer = AddToggleOption("Pets", bCrMFolAssPl)
+    oCreatureMaleNPCPlayer = AddToggleOption("Creatures", bAssMalCrPl)
+    If(bSupportFilter)
+      oFutaFollowerPlayer = AddToggleOption("Followers: Futa", bFutFolAssPl)
+      oFutaNPCPlayer = AddToggleOption("NPC: Futa", bAssFutPl)
+      oCreatureFemaleFollowerPlayer = AddToggleOption("Pets (Female)", bCrFFolAssPl)
+      oCreatureFemaleNPCPlayer = AddToggleOption("Creatures (Female)", bAssFemCrPl)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Followers can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerFollower = AddToggleOption("Followers: Male", bMalFolAssFol)
+    oMaleNPCFollower = AddToggleOption("NPC: Male", bAssMalFol)
+    oFemaleFollowerFollower = AddToggleOption("Followers: Female", bFemFolAssFol)
+    oFemaleNPCFollower = AddToggleOption("NPC: Female", bAssFemFol)
+    oCreatureMaleFollowerFollower = AddToggleOption("Pets", bCrMFolAssFol)
+    oCreatureMaleNPCFollower = AddToggleOption("Creatures", bAssMalCrFol)
+    If(bSupportFilter)
+      oFutaFollowerFollower = AddToggleOption("Followers: Futa", bFutFolAssFol)
+      oFutaNPCFollower = AddToggleOption("NPC: Futa", bAssFutFol)
+      oCreatureFemaleFollowerFollower = AddToggleOption("Pets (Female)", bCrFFolAssFol)
+      oCreatureFemaleNPCFollower = AddToggleOption("Creature (Female)", bAssFemCrFol)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Male NPC can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerMale = AddToggleOption("Followers: Male", bMalFolAssMal)
+    oMaleNPCMale = AddToggleOption("NPC: Male", bAssMalMal)
+    oFemaleFollowerMale = AddToggleOption("Followers: Female", bFemFolAssMal)
+    oFemaleNPCMale = AddToggleOption("NPC: Female", bAssFemMal)
+    oCreatureMaleFollowerMale = AddToggleOption("Pets", bCrMFolAssMal)
+    oCreatureMaleNPCMale = AddToggleOption("Creatures", bAssMalCrMal)
+    If(bSupportFilter)
+      oFutaFollowerMale = AddToggleOption("Followers: Futa", bFutFolAssMal)
+      oFutaNPCMale = AddToggleOption("NPC: Futa", bAssFutMal)
+      oCreatureFemaleFollowerMale = AddToggleOption("Pets (Female)", bCrFFolAssMal)
+      oCreatureFemaleNPCMale = AddToggleOption("Creatures (Female)", bAssFemCrMal)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Female NPC can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerFemale = AddToggleOption("Followers: Male", bMalFolAssFem)
+    oMaleNPCFemale = AddToggleOption("NPC: Male", bAssMalFem)
+    oFemaleFollowerFemale = AddToggleOption("Followers: Female", bFemFolAssFem)
+    oFemaleNPCFemale = AddToggleOption("NPC: Female", bAssFemFem)
+    oCreatureMaleFollowerFemale = AddToggleOption("Pets", bCrMFolAssFem)
+    oCreatureMaleNPCFemale = AddToggleOption("Creatures", bAssMalCrFem)
+    If(bSupportFilter)
+      oFutaFollowerFemale = AddToggleOption("Followers: Futa", bFutFolAssFem)
+      oFutaNPCFemale = AddToggleOption("NPC: Futa", bAssFutFem)
+      oCreatureFemaleFollowerFemale = AddToggleOption("Pets (Female)", bCrFFolAssFem)
+      oCreatureFemaleNPCFemale = AddToggleOption("Creatures (Female)", bAssFemCrFem)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    AddHeaderOption(" Creatures can be engaged by..")
+    AddEmptyOption()
+    oMaleFollowerCreatureMale = AddToggleOption("Followers: Male", bMalFolAssCrM)
+    oMaleNPCCreatureMale = AddToggleOption("NPC: Male", bAssMalCreat)
+    oFemaleFollowerCreatureMale = AddToggleOption("Followers: Female", bFemFolAssCrM)
+    oFemaleNPCCreatureMale = AddToggleOption("NPC: Female", bAssFemCreat)
+    oCreatureMaleFollowerCreatureMale = AddToggleOption("Pets", bCrMFolAssCrM)
+    oCreatureMaleNPCCreatureMale = AddToggleOption("Creatures", bAssMalCrCreat)
+    If(bSupportFilter)
+      oFutaFollowerCreatureMale = AddToggleOption("Followers: Futa", bFutFolAssCrM)
+      oFutaNPCCreatureMale = AddToggleOption("NPC: Futa", bAssFutCreat)
+      oCreatureFemaleFollowerCreatureMale = AddToggleOption("Pets (Female)", bCrFFolAssCrM)
+      oCreatureFemaleNPCCreatureMale = AddToggleOption("Creatures (Female)", bAssFemCrCreat)
+    EndIf
+    AddEmptyOption()
+    AddEmptyOption()
+    ; ----------------------------------------------------------
+    If(bSupportFilter)
+      AddHeaderOption(" Futa NPC can be engaged by..")
+      AddEmptyOption()
+      oMaleFollowerFuta = AddToggleOption("Followers: Male", bMalFolAssFut)
+      oMaleNPCFuta = AddToggleOption("NPC: Male", bAssMalFut)
+      oFemaleFollowerFuta = AddToggleOption("Followers: Female", bFemFolAssFut)
+      oFemaleNPCFuta = AddToggleOption("NPC: Female", bAssFemFut)
+      oCreatureMaleFollowerFuta = AddToggleOption("Pets", bCrMFolAssFut)
+      oCreatureMaleNPCFuta = AddToggleOption("Creatures", bAssMalCrFut)
+      ; If(bSupportFilter)
+      oFutaFollowerFuta = AddToggleOption("Followers: Futa", bFutFolAssFut)
+      oFutaNPCFuta = AddToggleOption("NPC: Futa", bAssFutFut)
+      oCreatureFemaleFollowerFuta = AddToggleOption("Pets (Female)", bCrFFolAssFut)
+      oCreatureFemaleNPCFuta = AddToggleOption("Creatures (Female)", bAssFemCrFut)
+      ; EndIf
+      AddEmptyOption()
+      AddEmptyOption()
+      ; --------------------------------------------------------
+      AddHeaderOption(" Creatures (Female) can be engaged by..")
+      AddEmptyOption()
+      oMaleFollowerCreatureFemale = AddToggleOption("Followers: Male", bMalFolAssCrF)
+      oMaleNPCCreatureFemale = AddToggleOption("NPC: Male", bAssMalFemCreat)
+      oFemaleFollowerCreatureFemale = AddToggleOption("Followers: Female", bFemFolAssCrF)
+      oFemaleNPCCreatureFemale = AddToggleOption("NPC: Female", bAssFemFemCreat)
+      oCreatureMaleFollowerCreatureFemale = AddToggleOption("Pets", bCrMFolAssCrF)
+      oCreatureMaleNPCCreatureFemale = AddToggleOption("Creatures", bAssMalCrFemCreat)
+      ; If(bSupportFilter)
+      oFutaFollowerCreatureFemale = AddToggleOption("Followers: Futa", bFutFolAssCrF)
+      oFutaNPCCreatureFemale = AddToggleOption("NPC: Futa", bAssFutFemCreat)
+       oCreatureFemaleFollowerCreatureFemale = AddToggleOption("Pets (Female)", bCrFFolAssCrF)
+      oCreatureFemaleNPCCreatureFemale = AddToggleOption("Creatures (Female)", bAssFemCrFemCreat)
+      ; EndIf
+    ElseIf(Page == " SexLab")
 
-		EndIf
+    EndIf
   endIf
 endEvent
 
@@ -1315,7 +1746,7 @@ Event OnConfigClose()
 EndEvent
 
 ; ==================================
-; 			 	States // General
+;          States // General
 ; ==================================
 
 State ScanCd
@@ -1352,13 +1783,13 @@ EndState
 
 ; SexLab
 State TreatVictim
-	Event OnSelectST()
-		bTreatAsVictim = !bTreatAsVictim
-		SetToggleOptionValueST(bTreatAsVictim)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Whether or not an engaged Actor should be considerd a Victim by SL")
-	EndEvent
+  Event OnSelectST()
+    bTreatAsVictim = !bTreatAsVictim
+    SetToggleOptionValueST(bTreatAsVictim)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Whether or not an engaged Actor should be considerd a Victim by SL")
+  EndEvent
 EndState
 
 State MaxActor
@@ -1479,136 +1910,136 @@ State UseBed
 EndState
 
 State SupportFilter
-	Event OnSelectST()
-		bSupportFilter = !bSupportFilter
-		SetToggleOptionValueST(bSupportFilter)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Enabling this adds additional Filter Options for Futas & Gendered Creatures to the \"Filter\" and \"Profiles\" Page.")
-	EndEvent
+  Event OnSelectST()
+    bSupportFilter = !bSupportFilter
+    SetToggleOptionValueST(bSupportFilter)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Enabling this adds additional Filter Options for Futas & Gendered Creatures to the \"Filter\" and \"Profiles\" Page.")
+  EndEvent
 EndState
 
 ; --------- Tagging
 State ReadMeTagging
-	Event OnSelectST()
-		Debug.MessageBox("Below are Input Options to let you ask for specific Animation Tags for specific Animation Classes.\nIf you want to use multiple Tags for one Class, you must divide them with commas (e.g. \"doggy, anal\" will make the System look for animations tagged with \"doggy\" and \"anal\"). Capitalisation doesnt matter.\nRemember that too many tags can significantly reduce the Animations that can play.\nFor 2p Animations, the first Gender is always the Victim whereas the second is the Aggressor.")
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Click me")
-	EndEvent
+  Event OnSelectST()
+    Debug.MessageBox("Below are Input Options to let you ask for specific Animation Tags for specific Animation Classes.\nIf you want to use multiple Tags for one Class, you must divide them with commas (e.g. \"doggy, anal\" will make the System look for animations tagged with \"doggy\" and \"anal\"). Capitalisation doesnt matter.\nRemember that too many tags can significantly reduce the Animations that can play.\nFor 2p Animations, the first Gender is always the Victim whereas the second is the Aggressor.")
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Click me")
+  EndEvent
 EndState
 
 State UseAggressiveAnim
-	Event OnSelectST()
-		bUseAggressive = !bUseAggressive
-		SetToggleOptionValueST(bUseAggressive)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If the mod should look for Animations tagged with \"Aggressive\".")
-	EndEvent
+  Event OnSelectST()
+    bUseAggressive = !bUseAggressive
+    SetToggleOptionValueST(bUseAggressive)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If the mod should look for Animations tagged with \"Aggressive\".")
+  EndEvent
 EndState
 
 ; --------- Debug
 State PrintTraces
-	Event OnSelectST()
-		bPrintTraces = !bPrintTraces
-		SetToggleOptionValueST(bPrintTraces)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Print Traces to the log. This is meant for testing only and can impact performance in crowded Places.")
-	EndEvent
+  Event OnSelectST()
+    bPrintTraces = !bPrintTraces
+    SetToggleOptionValueST(bPrintTraces)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Print Traces to the log. This is meant for testing only and can impact performance in crowded Places.")
+  EndEvent
 EndState
 ; ==================================
-; 	    	States // Location
+;         States // Location
 ; ==================================
 State Cleared
   Event OnMenuOpenST()
-		SetMenuDialogStartIndex(iIfClearedIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	EndEvent
-	Event OnMenuAcceptST(int index)
-		iIfClearedIndex = index
-		SetMenuOptionValueST(ProfileList[iIfClearedIndex])
-	EndEvent
-	Event OnDefaultST()
-		iIfClearedIndex = 1
-		SetMenuOptionValueST(ProfileList[iIfClearedIndex])
-	EndEvent
+    SetMenuDialogStartIndex(iIfClearedIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  EndEvent
+  Event OnMenuAcceptST(int index)
+    iIfClearedIndex = index
+    SetMenuOptionValueST(ProfileList[iIfClearedIndex])
+  EndEvent
+  Event OnDefaultST()
+    iIfClearedIndex = 1
+    SetMenuOptionValueST(ProfileList[iIfClearedIndex])
+  EndEvent
   Event OnHighlightST()
     SetInfoText("*If this is assigned a Profile, the mod will use that Profile for any Hostile Location that is considered \"Cleared\", ignoring your Settings below")
   EndEvent
 EndState
 
 ; ==================================
-; 	    	States // Profiles
+;         States // Profiles
 ; ==================================
 State ProfileView
   Event OnMenuOpenST()
-		SetMenuDialogStartIndex(ProfileViewerIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileViewerList)
-	EndEvent
-	Event OnMenuAcceptST(int index)
-		ProfileViewerIndex = index
-		SetMenuOptionValueST(ProfileViewerList[ProfileViewerIndex])
-		ForcePageReset()
-	EndEvent
-	Event OnDefaultST()
-		ProfileViewerIndex = 0
-		SetMenuOptionValueST(ProfileViewerList[ProfileViewerIndex])
-		ForcePageReset()
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Your currently viewed Profile.\nLocations will only use the Profile that is assigned to them (See \"Locations\" Tab)")
-	endEvent
+    SetMenuDialogStartIndex(ProfileViewerIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileViewerList)
+  EndEvent
+  Event OnMenuAcceptST(int index)
+    ProfileViewerIndex = index
+    SetMenuOptionValueST(ProfileViewerList[ProfileViewerIndex])
+    ForcePageReset()
+  EndEvent
+  Event OnDefaultST()
+    ProfileViewerIndex = 0
+    SetMenuOptionValueST(ProfileViewerList[ProfileViewerIndex])
+    ForcePageReset()
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Your currently viewed Profile.\nLocations will only use the Profile that is assigned to them (See \"Locations\" Tab)")
+  endEvent
 EndState
 
 ; ------------------ Profiles
 ; --------- Sheep
 Function SheepProfile()
-	AddHeaderOption(" Sheep")
-	AddToggleOptionST("CombatSkipSheep", "Allow engagement while in Combat", bCombatSkipSheep)
-	AddSliderOptionST("EngChanceSheep", "Chance for Engagement", iEngageChanceSheep)
-	int HostileFlag = getFlag(bAllowHostiles)
-	AddToggleOptionST("HostileVictimSheep", "Allow Hostile Victims", bHostVicSheep, HostileFlag)
-	AddToggleOptionST("HostileOnFriendlySheep", "Hostiles engage Allies", bHostOnFriendSheep, HostileFlag)
-	AddHeaderOption(" Engagement")
-	ArousalSheep = AddToggleOption("Check for Arousal?", bUseArousalSheep)
-	int ArousalFlag = getFlag(bUseArousalSheep)
-	AddSliderOptionST("ArousThreshSheep", "NPC Arousal Threshhold", iArousalThreshSheep, "{0}", ArousalFlag)
-	;---------fluffy edit --------
-	AddSliderOptionST("ArousThreshPlayerSheep", "Player Arousal Threshhold", iArousalThreshPlayerSheep, "{0}", ArousalFlag)
-	;---------fluffy end edit -----
-	AddToggleOptionST("IgnoreVicArousalSheep", "Ignore Victim Arousal", bIgnoreVicArousalSheep, ArousalFlag)
-	DistanceSheep = AddToggleOption("Check for Distance?", bUseDistSheep)
-	AddSliderOptionST("maxDistanceSheep", "Maximum allowed Distance", fMaxDistanceSheep, "{0}m", getFlag(bUseDistSheep))
-	LOSSheep = AddToggleOption("Check for LoS?", bUseLoSSheep)
-	AddToggleOptionST("UseDispSheep", "Check for Disposition?", bUseDispotionSheep)
-	int DispFlag = getFlag(bUseDispotionSheep)
-	AddSliderOptionST("PlDispositionSheep", "Min Disposition (Player)", iMinDispPlSheep, "{0}", DispFlag)
-	AddSliderOptionST("FolDispositionSheep", "Min Disposition (Follower)", iMinDispFolSheep, "{0}", DispFlag)
-	AddSliderOptionST("NPCDispositionSheep", "Min Disposition (NPC)", iMinDispNPCSheep, "{0}", DispFlag)
-	SetCursorPosition(3)
-	AddHeaderOption(" Victim")
-	allowPlSheep = AddToggleOption("Allow Player to be engaged", bEngagePlSheep)
-	AddSliderOptionST("PreferPlSheep", "Prefer Player-Engagements", iPrefPlSheep, "{0}%", getFlag(bEngagePlSheep))
-	allowFolSheep = AddToggleOption("Allow Followers to be engaged", bEngageFolSheep)
-	AddToggleOptionST("RestrictFolGenderSheep", "Restrict Gender", bRestrictGenFolSheep, getFlag(bEngageFolSheep))
-	allowNPCSheep = AddToggleOption("Allow NPCs to be engaged", bEngageNPCSheep)
-	AddToggleOptionST("RestrictNPCGenderSheep", "Restrict Gender", bRestrictGenNPCSheep, getFlag(bEngageNPCSheep))
-	allowCrtSheep = AddToggleOption("Allow Creatures to be engaged", bEngageCreatureSheep)
-	If(bSupportFilter)
-		AddToggleOptionST("RestrictCrtGenderSheep", "Restrict Gender", bRestrictGenCrtSheep, getFlag(bEngageCreatureSheep))
-	EndIf
-	AddEmptyOption()
-	allowMalSheep = AddToggleOption("Allow Male Actors", bEngageMaleSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
-	allowFemSheep = AddToggleOption("Allow Female Actors", bEngageFemaleSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
-	If(bSupportFilter)
-		allowFutSheep = AddToggleOption("Allow Futa Actors", bEngageFutaSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
-		allowCrMSheep = AddToggleOption("Allow Male Creatures", bEngageCrMSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
-		allowCrFSheep = AddToggleOption("Allow Female Creatures", bEngageCrFSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
-	EndIf
+  AddHeaderOption(" Sheep")
+  AddToggleOptionST("CombatSkipSheep", "Allow engagement while in Combat", bCombatSkipSheep)
+  AddSliderOptionST("EngChanceSheep", "Chance for Engagement", iEngageChanceSheep)
+  int HostileFlag = getFlag(bAllowHostiles)
+  AddToggleOptionST("HostileVictimSheep", "Allow Hostile Victims", bHostVicSheep, HostileFlag)
+  AddToggleOptionST("HostileOnFriendlySheep", "Hostiles engage Allies", bHostOnFriendSheep, HostileFlag)
+  AddHeaderOption(" Engagement")
+  ArousalSheep = AddToggleOption("Check for Arousal?", bUseArousalSheep)
+  int ArousalFlag = getFlag(bUseArousalSheep)
+  AddSliderOptionST("ArousThreshSheep", "NPC Arousal Threshhold", iArousalThreshSheep, "{0}", ArousalFlag)
+  ;---------fluffy edit --------
+  AddSliderOptionST("ArousThreshPlayerSheep", "Player Arousal Threshhold", iArousalThreshPlayerSheep, "{0}", ArousalFlag)
+  ;---------fluffy end edit -----
+  AddToggleOptionST("IgnoreVicArousalSheep", "Ignore Victim Arousal", bIgnoreVicArousalSheep, ArousalFlag)
+  DistanceSheep = AddToggleOption("Check for Distance?", bUseDistSheep)
+  AddSliderOptionST("maxDistanceSheep", "Maximum allowed Distance", fMaxDistanceSheep, "{0}m", getFlag(bUseDistSheep))
+  LOSSheep = AddToggleOption("Check for LoS?", bUseLoSSheep)
+  AddToggleOptionST("UseDispSheep", "Check for Disposition?", bUseDispotionSheep)
+  int DispFlag = getFlag(bUseDispotionSheep)
+  AddSliderOptionST("PlDispositionSheep", "Min Disposition (Player)", iMinDispPlSheep, "{0}", DispFlag)
+  AddSliderOptionST("FolDispositionSheep", "Min Disposition (Follower)", iMinDispFolSheep, "{0}", DispFlag)
+  AddSliderOptionST("NPCDispositionSheep", "Min Disposition (NPC)", iMinDispNPCSheep, "{0}", DispFlag)
+  SetCursorPosition(3)
+  AddHeaderOption(" Victim")
+  allowPlSheep = AddToggleOption("Allow Player to be engaged", bEngagePlSheep)
+  AddSliderOptionST("PreferPlSheep", "Prefer Player-Engagements", iPrefPlSheep, "{0}%", getFlag(bEngagePlSheep))
+  allowFolSheep = AddToggleOption("Allow Followers to be engaged", bEngageFolSheep)
+  AddToggleOptionST("RestrictFolGenderSheep", "Restrict Gender", bRestrictGenFolSheep, getFlag(bEngageFolSheep))
+  allowNPCSheep = AddToggleOption("Allow NPCs to be engaged", bEngageNPCSheep)
+  AddToggleOptionST("RestrictNPCGenderSheep", "Restrict Gender", bRestrictGenNPCSheep, getFlag(bEngageNPCSheep))
+  allowCrtSheep = AddToggleOption("Allow Creatures to be engaged", bEngageCreatureSheep)
+  If(bSupportFilter)
+    AddToggleOptionST("RestrictCrtGenderSheep", "Restrict Gender", bRestrictGenCrtSheep, getFlag(bEngageCreatureSheep))
+  EndIf
+  AddEmptyOption()
+  allowMalSheep = AddToggleOption("Allow Male Actors", bEngageMaleSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
+  allowFemSheep = AddToggleOption("Allow Female Actors", bEngageFemaleSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
+  If(bSupportFilter)
+    allowFutSheep = AddToggleOption("Allow Futa Actors", bEngageFutaSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
+    allowCrMSheep = AddToggleOption("Allow Male Creatures", bEngageCrMSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
+    allowCrFSheep = AddToggleOption("Allow Female Creatures", bEngageCrFSheep, getFlagOR(bRestrictGenFolSheep, bRestrictGenNPCSheep, bRestrictGenCrtSheep))
+  EndIf
 EndFunction
 
 State CombatSkipSheep
@@ -1635,25 +2066,25 @@ State EngChanceSheep
 EndState
 
 State HostileVictimSheep
-	Event OnSelectST()
-		bHostVicSheep = !bHostVicSheep
-		SetToggleOptionValueST(bHostVicSheep)
-	endEvent
-	Event OnHighlightST()
-		SetInfoText("Are hostile Actors allowed to be engaged?")
-	EndEvent
+  Event OnSelectST()
+    bHostVicSheep = !bHostVicSheep
+    SetToggleOptionValueST(bHostVicSheep)
+  endEvent
+  Event OnHighlightST()
+    SetInfoText("Are hostile Actors allowed to be engaged?")
+  EndEvent
 EndState
 
 State HostileOnFriendlySheep
-	Event OnSelectST()
-		bHostOnFriendSheep = !bHostOnFriendSheep
-		SetToggleOptionValueST(bHostOnFriendSheep)
-	endEvent
-	Event OnHighlightST()
-		SetInfoText("Are hostile Actors are allowed to attack friendly ones?")
-	EndEvent
+  Event OnSelectST()
+    bHostOnFriendSheep = !bHostOnFriendSheep
+    SetToggleOptionValueST(bHostOnFriendSheep)
+  endEvent
+  Event OnHighlightST()
+    SetInfoText("Are hostile Actors are allowed to attack friendly ones?")
+  EndEvent
 EndState
-;	--------- Victim Settings
+;  --------- Victim Settings
 State PreferPlSheep
   Event OnSliderOpenST()
     SetSliderDialogStartValue(iPrefPlSheep)
@@ -1671,68 +2102,68 @@ State PreferPlSheep
 EndState
 
 State RestrictFolGenderSheep
-	Event OnSelectST()
-		bRestrictGenFolSheep = !bRestrictGenFolSheep
-		SetToggleOptionValueST(bRestrictGenFolSheep)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Followers with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenFolSheep = !bRestrictGenFolSheep
+    SetToggleOptionValueST(bRestrictGenFolSheep)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Followers with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
 State RestrictNPCGenderSheep
-	Event OnSelectST()
-		bRestrictGenNPCSheep = !bRestrictGenNPCSheep
-		SetToggleOptionValueST(bRestrictGenNPCSheep)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Actors with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenNPCSheep = !bRestrictGenNPCSheep
+    SetToggleOptionValueST(bRestrictGenNPCSheep)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Actors with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
 State RestrictCrtGenderSheep
-	Event OnSelectST()
-		bRestrictGenCrtSheep = !bRestrictGenCrtSheep
-		SetToggleOptionValueST(bRestrictGenCrtSheep)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Creatures with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenCrtSheep = !bRestrictGenCrtSheep
+    SetToggleOptionValueST(bRestrictGenCrtSheep)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Creatures with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
-;	--------- Engagement Settings
+;  --------- Engagement Settings
 State ArousThreshSheep
   Event OnSliderOpenST()
-		SetSliderDialogStartValue(iArousalThreshSheep)
-		SetSliderDialogDefaultValue(1)
-		SetSliderDialogRange(5, 101)
-		SetSliderDialogInterval(1)
-	EndEvent
-	Event OnSliderAcceptST(float value)
-		iArousalThreshSheep = value as int
-		SetSliderOptionValueST(iArousalThreshSheep)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("The minimum arousal required for a Scene to start with NPC (set to 101 to disable).")
-	EndEvent
+    SetSliderDialogStartValue(iArousalThreshSheep)
+    SetSliderDialogDefaultValue(1)
+    SetSliderDialogRange(5, 101)
+    SetSliderDialogInterval(1)
+  EndEvent
+  Event OnSliderAcceptST(float value)
+    iArousalThreshSheep = value as int
+    SetSliderOptionValueST(iArousalThreshSheep)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("The minimum arousal required for a Scene to start with NPC (set to 101 to disable).")
+  EndEvent
 EndState
 
 ;----------fluffy edit ------
 
 State ArousThreshPlayerSheep
   Event OnSliderOpenST()
-		SetSliderDialogStartValue(iArousalThreshPlayerSheep)
-		SetSliderDialogDefaultValue(1)
-		SetSliderDialogRange(5, 101)
-		SetSliderDialogInterval(1)
-	EndEvent
-	Event OnSliderAcceptST(float value)
-		iArousalThreshPlayerSheep = value as int
-		SetSliderOptionValueST(iArousalThreshPlayerSheep)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("The minimum arousal required for a Scene to start with player (set to 101 to disable).")
-	EndEvent
+    SetSliderDialogStartValue(iArousalThreshPlayerSheep)
+    SetSliderDialogDefaultValue(1)
+    SetSliderDialogRange(5, 101)
+    SetSliderDialogInterval(1)
+  EndEvent
+  Event OnSliderAcceptST(float value)
+    iArousalThreshPlayerSheep = value as int
+    SetSliderOptionValueST(iArousalThreshPlayerSheep)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("The minimum arousal required for a Scene to start with player (set to 101 to disable).")
+  EndEvent
 EndState
 
 ;----------fluffy end edit -------------
@@ -1832,45 +2263,45 @@ EndState
 
 ; --------- Wolf
 Function WolfProfile()
-	AddHeaderOption(" Wolf")
-	AddToggleOptionST("CombatSkipWolf", "Allow engagement while in Combat", bCombatSkipWolf)
-	AddSliderOptionST("EngChanceWolf", "Chance for Engagement", iEngageChanceWolf)
-	int HostileFlag = getFlag(bAllowHostiles)
-	AddToggleOptionST("HostileVictimWolf", "Allow Hostile Victims", bHostVicWolf, HostileFlag)
-	AddToggleOptionST("HostileOnFriendlyWolf", "Hostiles engage Allies", bHostOnFriendWolf, HostileFlag)
-	AddHeaderOption(" Engagement")
-	ArousalWolf = AddToggleOption("Check for Arousal?", bUseArousalWolf)
-	int ArousalFlag = getFlag(bUseArousalWolf)
-	AddSliderOptionST("ArousThreshWolf", "Arousal Threshhold", iArousalThreshWolf, "{0}", ArousalFlag)
-	AddToggleOptionST("IgnoreVicArousalWolf", "Ignore Victim Arousal", bIgnoreVicArousalWolf, ArousalFlag)
-	DistanceWolf = AddToggleOption("Check for Distance?", bUseDistWolf)
-	AddSliderOptionST("maxDistanceWolf", "Maximum allowed Distance", fMaxDistanceWolf, "{0}m", getFlag(bUseDistWolf))
-	LOSWolf = AddToggleOption("Check for LoS?", bUseLoSWolf)
-	AddToggleOptionST("UseDispWolf", "Check for Disposition?", bUseDispotionWolf)
-	int DispFlag = getFlag(bUseDispotionWolf)
-	AddSliderOptionST("PlDispositionWolf", "Min Disposition (Player)", iMinDispPlWolf, "{0}", DispFlag)
-	AddSliderOptionST("FolDispositionWolf", "Min Disposition (Follower)", iMinDispFolWolf, "{0}", DispFlag)
-	AddSliderOptionST("NPCDispositionWolf", "Min Disposition (NPC)", iMinDispNPCWolf, "{0}", DispFlag)
-	SetCursorPosition(3)
-	AddHeaderOption(" Victim")
-	allowPlWolf = AddToggleOption("Allow Player to be engaged", bEngagePlWolf)
-	AddSliderOptionST("PreferPlWolf", "Prefer Player-Engagements", iPrefPlWolf, "{0}%", getFlag(bEngagePlWolf))
-	allowFolWolf = AddToggleOption("Allow Followers to be engaged", bEngageFolWolf)
-	AddToggleOptionST("RestrictFolGenderWolf", "Restrict Gender", bRestrictGenFolWolf, getFlag(bEngageFolWolf))
-	allowNPCWolf = AddToggleOption("Allow NPCs to be engaged", bEngageNPCWolf)
-	AddToggleOptionST("RestrictNPCGenderWolf", "Restrict Gender", bRestrictGenNPCWolf, getFlag(bEngageNPCWolf))
-	allowCrtWolf = AddToggleOption("Allow Creatures to be engaged", bEngageCreatureWolf)
-	If(bSupportFilter)
-		AddToggleOptionST("RestrictCrtGenderWolf", "Restrict Gender", bRestrictGenCrtWolf, getFlag(bEngageCreatureWolf))
-	EndIf
-	AddEmptyOption()
-	allowMalWolf = AddToggleOption("Allow Male Actors", bEngageMaleWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
-	allowFemWolf = AddToggleOption("Allow Female Actors", bEngageFemaleWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
-	If(bSupportFilter)
-		allowFutWolf = AddToggleOption("Allow Futa Actors", bEngageFutaWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
-		allowCrMWolf = AddToggleOption("Allow Male Creatures", bEngageCrMWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
-		allowCrFWolf = AddToggleOption("Allow Female Creatures", bEngageCrFWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
-	EndIf
+  AddHeaderOption(" Wolf")
+  AddToggleOptionST("CombatSkipWolf", "Allow engagement while in Combat", bCombatSkipWolf)
+  AddSliderOptionST("EngChanceWolf", "Chance for Engagement", iEngageChanceWolf)
+  int HostileFlag = getFlag(bAllowHostiles)
+  AddToggleOptionST("HostileVictimWolf", "Allow Hostile Victims", bHostVicWolf, HostileFlag)
+  AddToggleOptionST("HostileOnFriendlyWolf", "Hostiles engage Allies", bHostOnFriendWolf, HostileFlag)
+  AddHeaderOption(" Engagement")
+  ArousalWolf = AddToggleOption("Check for Arousal?", bUseArousalWolf)
+  int ArousalFlag = getFlag(bUseArousalWolf)
+  AddSliderOptionST("ArousThreshWolf", "Arousal Threshhold", iArousalThreshWolf, "{0}", ArousalFlag)
+  AddToggleOptionST("IgnoreVicArousalWolf", "Ignore Victim Arousal", bIgnoreVicArousalWolf, ArousalFlag)
+  DistanceWolf = AddToggleOption("Check for Distance?", bUseDistWolf)
+  AddSliderOptionST("maxDistanceWolf", "Maximum allowed Distance", fMaxDistanceWolf, "{0}m", getFlag(bUseDistWolf))
+  LOSWolf = AddToggleOption("Check for LoS?", bUseLoSWolf)
+  AddToggleOptionST("UseDispWolf", "Check for Disposition?", bUseDispotionWolf)
+  int DispFlag = getFlag(bUseDispotionWolf)
+  AddSliderOptionST("PlDispositionWolf", "Min Disposition (Player)", iMinDispPlWolf, "{0}", DispFlag)
+  AddSliderOptionST("FolDispositionWolf", "Min Disposition (Follower)", iMinDispFolWolf, "{0}", DispFlag)
+  AddSliderOptionST("NPCDispositionWolf", "Min Disposition (NPC)", iMinDispNPCWolf, "{0}", DispFlag)
+  SetCursorPosition(3)
+  AddHeaderOption(" Victim")
+  allowPlWolf = AddToggleOption("Allow Player to be engaged", bEngagePlWolf)
+  AddSliderOptionST("PreferPlWolf", "Prefer Player-Engagements", iPrefPlWolf, "{0}%", getFlag(bEngagePlWolf))
+  allowFolWolf = AddToggleOption("Allow Followers to be engaged", bEngageFolWolf)
+  AddToggleOptionST("RestrictFolGenderWolf", "Restrict Gender", bRestrictGenFolWolf, getFlag(bEngageFolWolf))
+  allowNPCWolf = AddToggleOption("Allow NPCs to be engaged", bEngageNPCWolf)
+  AddToggleOptionST("RestrictNPCGenderWolf", "Restrict Gender", bRestrictGenNPCWolf, getFlag(bEngageNPCWolf))
+  allowCrtWolf = AddToggleOption("Allow Creatures to be engaged", bEngageCreatureWolf)
+  If(bSupportFilter)
+    AddToggleOptionST("RestrictCrtGenderWolf", "Restrict Gender", bRestrictGenCrtWolf, getFlag(bEngageCreatureWolf))
+  EndIf
+  AddEmptyOption()
+  allowMalWolf = AddToggleOption("Allow Male Actors", bEngageMaleWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
+  allowFemWolf = AddToggleOption("Allow Female Actors", bEngageFemaleWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
+  If(bSupportFilter)
+    allowFutWolf = AddToggleOption("Allow Futa Actors", bEngageFutaWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
+    allowCrMWolf = AddToggleOption("Allow Male Creatures", bEngageCrMWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
+    allowCrFWolf = AddToggleOption("Allow Female Creatures", bEngageCrFWolf, getFlagOR(bRestrictGenFolWolf, bRestrictGenNPCWolf, bRestrictGenCrtWolf))
+  EndIf
 EndFunction
 
 State CombatSkipWolf
@@ -1897,25 +2328,25 @@ State EngChanceWolf
 EndState
 
 State HostileVictimWolf
-	Event OnSelectST()
-		bHostVicWolf = !bHostVicWolf
-		SetToggleOptionValueST(bHostVicWolf)
-	endEvent
-	Event OnHighlightST()
-		SetInfoText("Are hostile Actors allowed to be engaged?")
-	EndEvent
+  Event OnSelectST()
+    bHostVicWolf = !bHostVicWolf
+    SetToggleOptionValueST(bHostVicWolf)
+  endEvent
+  Event OnHighlightST()
+    SetInfoText("Are hostile Actors allowed to be engaged?")
+  EndEvent
 EndState
 
 State HostileOnFriendlyWolf
-	Event OnSelectST()
-		bHostOnFriendWolf = !bHostOnFriendWolf
-		SetToggleOptionValueST(bHostOnFriendWolf)
-	endEvent
-	Event OnHighlightST()
-		SetInfoText("Are hostile Actors are allowed to attack friendly ones?")
-	EndEvent
+  Event OnSelectST()
+    bHostOnFriendWolf = !bHostOnFriendWolf
+    SetToggleOptionValueST(bHostOnFriendWolf)
+  endEvent
+  Event OnHighlightST()
+    SetInfoText("Are hostile Actors are allowed to attack friendly ones?")
+  EndEvent
 EndState
-;	--------- Victim Settings
+;  --------- Victim Settings
 State PreferPlWolf
   Event OnSliderOpenST()
     SetSliderDialogStartValue(iPrefPlWolf)
@@ -1933,50 +2364,50 @@ State PreferPlWolf
 EndState
 
 State RestrictFolGenderWolf
-	Event OnSelectST()
-		bRestrictGenFolWolf = !bRestrictGenFolWolf
-		SetToggleOptionValueST(bRestrictGenFolWolf)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Followers with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenFolWolf = !bRestrictGenFolWolf
+    SetToggleOptionValueST(bRestrictGenFolWolf)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Followers with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
 State RestrictNPCGenderWolf
-	Event OnSelectST()
-		bRestrictGenNPCWolf = !bRestrictGenNPCWolf
-		SetToggleOptionValueST(bRestrictGenNPCWolf)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Actors with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenNPCWolf = !bRestrictGenNPCWolf
+    SetToggleOptionValueST(bRestrictGenNPCWolf)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Actors with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
 State RestrictCrtGenderWolf
-	Event OnSelectST()
-		bRestrictGenCrtWolf = !bRestrictGenCrtWolf
-		SetToggleOptionValueST(bRestrictGenCrtWolf)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Creatures with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenCrtWolf = !bRestrictGenCrtWolf
+    SetToggleOptionValueST(bRestrictGenCrtWolf)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Creatures with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
-;	--------- Engagement Settings
+;  --------- Engagement Settings
 State ArousThreshWolf
   Event OnSliderOpenST()
-		SetSliderDialogStartValue(iArousalThreshWolf)
-		SetSliderDialogDefaultValue(1)
-		SetSliderDialogRange(5, 60)
-		SetSliderDialogInterval(1)
-	EndEvent
-	Event OnSliderAcceptST(float value)
-		iArousalThreshWolf = value as int
-		SetSliderOptionValueST(iArousalThreshWolf)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("The minimum arousal recruited for a Scene to start.")
-	EndEvent
+    SetSliderDialogStartValue(iArousalThreshWolf)
+    SetSliderDialogDefaultValue(1)
+    SetSliderDialogRange(5, 60)
+    SetSliderDialogInterval(1)
+  EndEvent
+  Event OnSliderAcceptST(float value)
+    iArousalThreshWolf = value as int
+    SetSliderOptionValueST(iArousalThreshWolf)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("The minimum arousal recruited for a Scene to start.")
+  EndEvent
 EndState
 
 State IgnoreVicArousalWolf
@@ -2074,45 +2505,45 @@ EndState
 
 ; --------- Bunny
 Function BunnyProfile()
-	AddHeaderOption(" Bunny")
-	AddToggleOptionST("CombatSkipBunny", "Allow engagement while in Combat", bCombatSkipBunny)
-	AddSliderOptionST("EngChanceBunny", "Chance for Engagement", iEngageChanceBunny)
-	int HostileFlag = getFlag(bAllowHostiles)
-	AddToggleOptionST("HostileVictimBunny", "Allow Hostile Victims", bHostVicBunny, HostileFlag)
-	AddToggleOptionST("HostileOnFriendlyBunny", "Hostiles engage Allies", bHostOnFriendBunny, HostileFlag)
-	AddHeaderOption(" Engagement")
-	ArousalBunny = AddToggleOption("Check for Arousal?", bUseArousalBunny)
-	int ArousalFlag = getFlag(bUseArousalBunny)
-	AddSliderOptionST("ArousThreshBunny", "Arousal Threshhold", iArousalThreshBunny, "{0}", ArousalFlag)
-	AddToggleOptionST("IgnoreVicArousalBunny", "Ignore Victim Arousal", bIgnoreVicArousalBunny, ArousalFlag)
-	DistanceBunny = AddToggleOption("Check for Distance?", bUseDistBunny)
-	AddSliderOptionST("maxDistanceBunny", "Maximum allowed Distance", fMaxDistanceBunny, "{0}m", getFlag(bUseDistBunny))
-	LOSBunny = AddToggleOption("Check for LoS?", bUseLoSBunny)
-	AddToggleOptionST("UseDispBunny", "Check for Disposition?", bUseDispotionBunny)
-	int DispFlag = getFlag(bUseDispotionBunny)
-	AddSliderOptionST("PlDispositionBunny", "Min Disposition (Player)", iMinDispPlBunny, "{0}", DispFlag)
-	AddSliderOptionST("FolDispositionBunny", "Min Disposition (Follower)", iMinDispFolBunny, "{0}", DispFlag)
-	AddSliderOptionST("NPCDispositionBunny", "Min Disposition (NPC)", iMinDispNPCBunny, "{0}", DispFlag)
-	SetCursorPosition(3)
-	AddHeaderOption(" Victim")
-	allowPlBunny = AddToggleOption("Allow Player to be engaged", bEngagePlBunny)
-	AddSliderOptionST("PreferPlBunny", "Prefer Player-Engagements", iPrefPlBunny, "{0}%", getFlag(bEngagePlBunny))
-	allowFolBunny = AddToggleOption("Allow Followers to be engaged", bEngageFolBunny)
-	AddToggleOptionST("RestrictFolGenderBunny", "Restrict Gender", bRestrictGenFolBunny, getFlag(bEngageFolBunny))
-	allowNPCBunny = AddToggleOption("Allow NPCs to be engaged", bEngageNPCBunny)
-	AddToggleOptionST("RestrictNPCGenderBunny", "Restrict Gender", bRestrictGenNPCBunny, getFlag(bEngageNPCBunny))
-	allowCrtBunny = AddToggleOption("Allow Creatures to be engaged", bEngageCreatureBunny)
-	If(bSupportFilter)
-		AddToggleOptionST("RestrictCrtGenderBunny", "Restrict Gender", bRestrictGenCrtBunny, getFlag(bEngageCreatureBunny))
-	EndIf
-	AddEmptyOption()
-	allowMalBunny = AddToggleOption("Allow Male Actors", bEngageMaleBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
-	allowFemBunny = AddToggleOption("Allow Female Actors", bEngageFemaleBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
-	If(bSupportFilter)
-		allowFutBunny = AddToggleOption("Allow Futa Actors", bEngageFutaBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
-		allowCrMBunny = AddToggleOption("Allow Male Creatures", bEngageCrMBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
-		allowCrFBunny = AddToggleOption("Allow Female Creatures", bEngageCrFBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
-	EndIf
+  AddHeaderOption(" Bunny")
+  AddToggleOptionST("CombatSkipBunny", "Allow engagement while in Combat", bCombatSkipBunny)
+  AddSliderOptionST("EngChanceBunny", "Chance for Engagement", iEngageChanceBunny)
+  int HostileFlag = getFlag(bAllowHostiles)
+  AddToggleOptionST("HostileVictimBunny", "Allow Hostile Victims", bHostVicBunny, HostileFlag)
+  AddToggleOptionST("HostileOnFriendlyBunny", "Hostiles engage Allies", bHostOnFriendBunny, HostileFlag)
+  AddHeaderOption(" Engagement")
+  ArousalBunny = AddToggleOption("Check for Arousal?", bUseArousalBunny)
+  int ArousalFlag = getFlag(bUseArousalBunny)
+  AddSliderOptionST("ArousThreshBunny", "Arousal Threshhold", iArousalThreshBunny, "{0}", ArousalFlag)
+  AddToggleOptionST("IgnoreVicArousalBunny", "Ignore Victim Arousal", bIgnoreVicArousalBunny, ArousalFlag)
+  DistanceBunny = AddToggleOption("Check for Distance?", bUseDistBunny)
+  AddSliderOptionST("maxDistanceBunny", "Maximum allowed Distance", fMaxDistanceBunny, "{0}m", getFlag(bUseDistBunny))
+  LOSBunny = AddToggleOption("Check for LoS?", bUseLoSBunny)
+  AddToggleOptionST("UseDispBunny", "Check for Disposition?", bUseDispotionBunny)
+  int DispFlag = getFlag(bUseDispotionBunny)
+  AddSliderOptionST("PlDispositionBunny", "Min Disposition (Player)", iMinDispPlBunny, "{0}", DispFlag)
+  AddSliderOptionST("FolDispositionBunny", "Min Disposition (Follower)", iMinDispFolBunny, "{0}", DispFlag)
+  AddSliderOptionST("NPCDispositionBunny", "Min Disposition (NPC)", iMinDispNPCBunny, "{0}", DispFlag)
+  SetCursorPosition(3)
+  AddHeaderOption(" Victim")
+  allowPlBunny = AddToggleOption("Allow Player to be engaged", bEngagePlBunny)
+  AddSliderOptionST("PreferPlBunny", "Prefer Player-Engagements", iPrefPlBunny, "{0}%", getFlag(bEngagePlBunny))
+  allowFolBunny = AddToggleOption("Allow Followers to be engaged", bEngageFolBunny)
+  AddToggleOptionST("RestrictFolGenderBunny", "Restrict Gender", bRestrictGenFolBunny, getFlag(bEngageFolBunny))
+  allowNPCBunny = AddToggleOption("Allow NPCs to be engaged", bEngageNPCBunny)
+  AddToggleOptionST("RestrictNPCGenderBunny", "Restrict Gender", bRestrictGenNPCBunny, getFlag(bEngageNPCBunny))
+  allowCrtBunny = AddToggleOption("Allow Creatures to be engaged", bEngageCreatureBunny)
+  If(bSupportFilter)
+    AddToggleOptionST("RestrictCrtGenderBunny", "Restrict Gender", bRestrictGenCrtBunny, getFlag(bEngageCreatureBunny))
+  EndIf
+  AddEmptyOption()
+  allowMalBunny = AddToggleOption("Allow Male Actors", bEngageMaleBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
+  allowFemBunny = AddToggleOption("Allow Female Actors", bEngageFemaleBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
+  If(bSupportFilter)
+    allowFutBunny = AddToggleOption("Allow Futa Actors", bEngageFutaBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
+    allowCrMBunny = AddToggleOption("Allow Male Creatures", bEngageCrMBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
+    allowCrFBunny = AddToggleOption("Allow Female Creatures", bEngageCrFBunny, getFlagOR(bRestrictGenFolBunny, bRestrictGenNPCBunny, bRestrictGenCrtBunny))
+  EndIf
 EndFunction
 
 State CombatSkipBunny
@@ -2139,25 +2570,25 @@ State EngChanceBunny
 EndState
 
 State HostileVictimBunny
-	Event OnSelectST()
-		bHostVicBunny = !bHostVicBunny
-		SetToggleOptionValueST(bHostVicBunny)
-	endEvent
-	Event OnHighlightST()
-		SetInfoText("Are hostile Actors allowed to be engaged?")
-	EndEvent
+  Event OnSelectST()
+    bHostVicBunny = !bHostVicBunny
+    SetToggleOptionValueST(bHostVicBunny)
+  endEvent
+  Event OnHighlightST()
+    SetInfoText("Are hostile Actors allowed to be engaged?")
+  EndEvent
 EndState
 
 State HostileOnFriendlyBunny
-	Event OnSelectST()
-		bHostOnFriendBunny = !bHostOnFriendBunny
-		SetToggleOptionValueST(bHostOnFriendBunny)
-	endEvent
-	Event OnHighlightST()
-		SetInfoText("Are hostile Actors are allowed to attack friendly ones?")
-	EndEvent
+  Event OnSelectST()
+    bHostOnFriendBunny = !bHostOnFriendBunny
+    SetToggleOptionValueST(bHostOnFriendBunny)
+  endEvent
+  Event OnHighlightST()
+    SetInfoText("Are hostile Actors are allowed to attack friendly ones?")
+  EndEvent
 EndState
-;	--------- Victim Settings
+;  --------- Victim Settings
 State PreferPlBunny
   Event OnSliderOpenST()
     SetSliderDialogStartValue(iPrefPlBunny)
@@ -2175,50 +2606,50 @@ State PreferPlBunny
 EndState
 
 State RestrictFolGenderBunny
-	Event OnSelectST()
-		bRestrictGenFolBunny = !bRestrictGenFolBunny
-		SetToggleOptionValueST(bRestrictGenFolBunny)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Followers with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenFolBunny = !bRestrictGenFolBunny
+    SetToggleOptionValueST(bRestrictGenFolBunny)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Followers with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
 State RestrictNPCGenderBunny
-	Event OnSelectST()
-		bRestrictGenNPCBunny = !bRestrictGenNPCBunny
-		SetToggleOptionValueST(bRestrictGenNPCBunny)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Actors with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenNPCBunny = !bRestrictGenNPCBunny
+    SetToggleOptionValueST(bRestrictGenNPCBunny)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Actors with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
 State RestrictCrtGenderBunny
-	Event OnSelectST()
-		bRestrictGenCrtBunny = !bRestrictGenCrtBunny
-		SetToggleOptionValueST(bRestrictGenCrtBunny)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("If enabled, only Creatures with a Valid Gender (set below) will be valid as Victim.")
-	EndEvent
+  Event OnSelectST()
+    bRestrictGenCrtBunny = !bRestrictGenCrtBunny
+    SetToggleOptionValueST(bRestrictGenCrtBunny)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("If enabled, only Creatures with a Valid Gender (set below) will be valid as Victim.")
+  EndEvent
 EndState
 
-;	--------- Engagement Settings
+;  --------- Engagement Settings
 State ArousThreshBunny
   Event OnSliderOpenST()
-		SetSliderDialogStartValue(iArousalThreshBunny)
-		SetSliderDialogDefaultValue(1)
-		SetSliderDialogRange(5, 60)
-		SetSliderDialogInterval(1)
-	EndEvent
-	Event OnSliderAcceptST(float value)
-		iArousalThreshBunny = value as int
-		SetSliderOptionValueST(iArousalThreshBunny)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("The minimum arousal recruited for a Scene to start.")
-	EndEvent
+    SetSliderDialogStartValue(iArousalThreshBunny)
+    SetSliderDialogDefaultValue(1)
+    SetSliderDialogRange(5, 60)
+    SetSliderDialogInterval(1)
+  EndEvent
+  Event OnSliderAcceptST(float value)
+    iArousalThreshBunny = value as int
+    SetSliderOptionValueST(iArousalThreshBunny)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("The minimum arousal recruited for a Scene to start.")
+  EndEvent
 EndState
 
 State IgnoreVicArousalBunny
@@ -2315,638 +2746,638 @@ State NPCDispositionBunny
 EndState
 
 ; ==================================
-;				 	States // Filter
+;           States // Filter
 ; ==================================
 State ReadMeFilter
-	Event OnSelectST()
-		Debug.MessageBox("The Options here let you decide who can engage who. All of them are from the Victims PoV\n(\"Can [Headline] be engaged by [Option]?\")")
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("Click me")
-	EndEvent
+  Event OnSelectST()
+    Debug.MessageBox("The Options here let you decide who can engage who. All of them are from the Victims PoV\n(\"Can [Headline] be engaged by [Option]?\")")
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Click me")
+  EndEvent
 EndState
 
 ; ==================================
-; 					NON STATE MCM
+;           NON STATE MCM
 ; ==================================
 Event OnOptionSelect(int option)
-	; ======================== Profile ========================
-	; ========================= Sheep =========================
-	If(option == allowPlSheep)
-		bEngagePlSheep = !bEngagePlSheep
-		If(bEngagePlSheep)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "PreferPlSheep")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "PreferPlSheep")
-		EndIf
-		SetToggleOptionValue(allowPlSheep, bEngagePlSheep)
-	ElseIf(option == allowFolSheep)
-		bEngageFolSheep = !bEngageFolSheep
-		If(bEngageFolSheep)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictFolGenderSheep")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictFolGenderSheep")
-		EndIf
-		SetToggleOptionValue(allowFolSheep, bEngageFolSheep)
-	ElseIf(option == allowNPCSheep)
-		bEngageNPCSheep = !bEngageNPCSheep
-		If(bEngageNPCSheep)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictNPCGenderSheep")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictNPCGenderSheep")
-		EndIf
-		SetToggleOptionValue(allowNPCSheep, bEngageNPCSheep)
-	ElseIf(option == allowCrtSheep)
-		bEngageCreatureSheep = !bEngageCreatureSheep
-		If(bEngageCreatureSheep)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictCrtGenderSheep")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictCrtGenderSheep")
-		EndIf
-		SetToggleOptionValue(allowCrtSheep, bEngageCreatureSheep)
-	ElseIf(option == allowMalSheep)
-		bEngageMaleSheep = !bEngageMaleSheep
-		SetToggleOptionValue(allowMalSheep, bEngageMaleSheep)
-	ElseIf(option == allowFemSheep)
-		bEngageFemaleSheep = !bEngageFemaleSheep
-		SetToggleOptionValue(allowFemSheep, bEngageFemaleSheep)
-	ElseIf(option == allowFutSheep)
-		bEngageFutaSheep = !bEngageFutaSheep
-		SetToggleOptionValue(allowFutSheep, bEngageFutaSheep)
-	ElseIf(option == ArousalSheep)
-		bUseArousalSheep = !bUseArousalSheep
-		If(bUseArousalSheep)
-			SetOptionFlagsST(OPTION_FLAG_NONE, true, "ArousThreshSheep")
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "IgnoreVicArousalSheep")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, true, "ArousThreshSheep")
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "IgnoreVicArousalSheep")
-		EndIf
-		SetToggleOptionValue(ArousalSheep, bUseArousalSheep)
-	ElseIf(option == LOSSheep)
-		bUseLoSSheep = !bUseLoSSheep
-		SetToggleOptionValue(LOSSheep, bUseLoSSheep)
-	ElseIf(option == DistanceSheep)
-		bUseDistSheep = !bUseDistSheep
-		If(bUseDistSheep)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "maxDistanceSheep")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "maxDistanceSheep")
-		EndIf
-		SetToggleOptionValue(DistanceSheep, bUseDistSheep)
-	ElseIf(option == allowCrMSheep)
-		bEngageCrMSheep = !bEngageCrMSheep
-		SetToggleOptionValue(allowCrMSheep, bEngageCrMSheep)
-	ElseIf(option == allowCrFSheep)
-		bEngageCrFSheep = !bEngageCrFSheep
-		SetToggleOptionValue(allowCrFSheep, bEngageCrFSheep)
-		; ========================= Wolf =========================
-	ElseIf(option == allowPlWolf)
-		bEngagePlWolf = !bEngagePlWolf
-		If(bEngagePlWolf)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "PreferPlWolf")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "PreferPlWolf")
-		EndIf
-		SetToggleOptionValue(allowPlWolf, bEngagePlWolf)
-	ElseIf(option == allowFolWolf)
-		bEngageFolWolf = !bEngageFolWolf
-		If(bEngageFolWolf)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictFolGenderWolf")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictFolGenderWolf")
-		EndIf
-		SetToggleOptionValue(allowFolWolf, bEngageFolWolf)
-	ElseIf(option == allowNPCWolf)
-		bEngageNPCWolf = !bEngageNPCWolf
-		If(bEngageNPCWolf)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictNPCGenderWolf")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictNPCGenderWolf")
-		EndIf
-		SetToggleOptionValue(allowNPCWolf, bEngageNPCWolf)
-	ElseIf(option == allowCrtWolf)
-		bEngageCreatureWolf = !bEngageCreatureWolf
-		If(bEngageCreatureWolf)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictCrtGenderWolf")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictCrtGenderWolf")
-		EndIf
-		SetToggleOptionValue(allowCrtWolf, bEngageCreatureWolf)
-	ElseIf(option == allowMalWolf)
-		bEngageMaleWolf = !bEngageMaleWolf
-		SetToggleOptionValue(allowMalWolf, bEngageMaleWolf)
-	ElseIf(option == allowFemWolf)
-		bEngageFemaleWolf = !bEngageFemaleWolf
-		SetToggleOptionValue(allowFemWolf, bEngageFemaleWolf)
-	ElseIf(option == allowFutWolf)
-		bEngageFutaWolf = !bEngageFutaWolf
-		SetToggleOptionValue(allowFutWolf, bEngageFutaWolf)
-	ElseIf(option == ArousalWolf)
-		bUseArousalWolf = !bUseArousalWolf
-		If(bUseArousalWolf)
-			SetOptionFlagsST(OPTION_FLAG_NONE, true, "ArousThreshWolf")
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "IgnoreVicArousalWolf")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, true, "ArousThreshWolf")
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "IgnoreVicArousalWolf")
-		EndIf
-		SetToggleOptionValue(ArousalWolf, bUseArousalWolf)
-	ElseIf(option == LOSWolf)
-		bUseLoSWolf = !bUseLoSWolf
-		SetToggleOptionValue(LOSWolf, bUseLoSWolf)
-	ElseIf(option == DistanceWolf)
-		bUseDistWolf = !bUseDistWolf
-		If(bUseDistWolf)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "maxDistanceWolf")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "maxDistanceWolf")
-		EndIf
-		SetToggleOptionValue(DistanceWolf, bUseDistWolf)
-	ElseIf(option == allowCrMWolf)
-		bEngageCrMWolf = !bEngageCrMWolf
-		SetToggleOptionValue(allowCrMWolf, bEngageCrMWolf)
-	ElseIf(option == allowCrFWolf)
-		bEngageCrFWolf = !bEngageCrFWolf
-		SetToggleOptionValue(allowCrFWolf, bEngageCrFWolf)
-		; ========================= Bunny =========================
-	ElseIf(option == allowPlBunny)
-		bEngagePlBunny = !bEngagePlBunny
-		If(bEngagePlBunny)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "PreferPlBunny")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "PreferPlBunny")
-		EndIf
-		SetToggleOptionValue(allowPlBunny, bEngagePlBunny)
-	ElseIf(option == allowFolBunny)
-		bEngageFolBunny = !bEngageFolBunny
-		If(bEngageFolBunny)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictFolGenderBunny")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictFolGenderBunny")
-		EndIf
-		SetToggleOptionValue(allowFolBunny, bEngageFolBunny)
-	ElseIf(option == allowNPCBunny)
-		bEngageNPCBunny = !bEngageNPCBunny
-		If(bEngageNPCBunny)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictNPCGenderBunny")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictNPCGenderBunny")
-		EndIf
-		SetToggleOptionValue(allowNPCBunny, bEngageNPCBunny)
-	ElseIf(option == allowCrtBunny)
-		bEngageCreatureBunny = !bEngageCreatureBunny
-		If(bEngageCreatureBunny)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictCrtGenderBunny")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictCrtGenderBunny")
-		EndIf
-		SetToggleOptionValue(allowCrtBunny, bEngageCreatureBunny)
-	ElseIf(option == allowMalBunny)
-		bEngageMaleBunny = !bEngageMaleBunny
-		SetToggleOptionValue(allowMalBunny, bEngageMaleBunny)
-	ElseIf(option == allowFemBunny)
-		bEngageFemaleBunny = !bEngageFemaleBunny
-		SetToggleOptionValue(allowFemBunny, bEngageFemaleBunny)
-	ElseIf(option == allowFutBunny)
-		bEngageFutaBunny = !bEngageFutaBunny
-		SetToggleOptionValue(allowFutBunny, bEngageFutaBunny)
-	ElseIf(option == ArousalBunny)
-		bUseArousalBunny = !bUseArousalBunny
-		If(bUseArousalBunny)
-			SetOptionFlagsST(OPTION_FLAG_NONE, true, "ArousThreshBunny")
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "IgnoreVicArousalBunny")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, true, "ArousThreshBunny")
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "IgnoreVicArousalBunny")
-		EndIf
-		SetToggleOptionValue(ArousalBunny, bUseArousalBunny)
-	ElseIf(option == LOSBunny)
-		bUseLoSBunny = !bUseLoSBunny
-		SetToggleOptionValue(LOSBunny, bUseLoSBunny)
-	ElseIf(option == DistanceBunny)
-		bUseDistBunny = !bUseDistBunny
-		If(bUseDistBunny)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "maxDistanceBunny")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "maxDistanceBunny")
-		EndIf
-		SetToggleOptionValue(DistanceBunny, bUseDistBunny)
-	ElseIf(option == allowCrMBunny)
-		bEngageCrMBunny = !bEngageCrMBunny
-		SetToggleOptionValue(allowCrMBunny, bEngageCrMBunny)
-	ElseIf(option == allowCrFBunny)
-		bEngageCrFBunny = !bEngageCrFBunny
-		SetToggleOptionValue(allowCrFBunny, bEngageCrFBunny)
-		; ========================= Filter =========================
-		; ======================== Follower ========================
-		; Male Followers
-	ElseIf(option == oMaleFollowerPlayer)
-		bMalFolAssPl = !bMalFolAssPl
-		SetToggleOptionValue(oMaleFollowerPlayer, bMalFolAssPl)
-	ElseIf(option == oMaleFollowerFollower)
-		bMalFolAssFol = !bMalFolAssFol
-			SetToggleOptionValue(oMaleFollowerFollower, bMalFolAssFol)
-	ElseIf(option == oMaleFollowerMale)
-		bMalFolAssMal = !bMalFolAssMal
-		SetToggleOptionValue(oMaleFollowerMale, bMalFolAssMal)
-	ElseIf(option == oMaleFollowerFemale)
-		bMalFolAssFem = !bMalFolAssFem
-		SetToggleOptionValue(oMaleFollowerFemale, bMalFolAssFem)
-	ElseIf(option == oMaleFollowerFuta)
-		bMalFolAssFut = !bMalFolAssFut
-		SetToggleOptionValue(oMaleFollowerFuta, bMalFolAssFut)
-	ElseIf(option == oMaleFollowerCreatureMale)
-		bMalFolAssCrM = !bMalFolAssCrM
-		SetToggleOptionValue(oMaleFollowerCreatureMale, bMalFolAssCrM)
-	ElseIf(option == oMaleFollowerCreatureFemale)
-		bMalFolAssCrF = !bMalFolAssCrF
-		SetToggleOptionValue(oMaleFollowerCreatureFemale, bMalFolAssCrF)
-		; Female Followers
-	ElseIf(option == oFemaleFollowerPlayer)
-		bFemFolAssPl = !bFemFolAssPl
-		SetToggleOptionValue(oFemaleFollowerPlayer, bFemFolAssPl)
-	ElseIf(option == oFemaleFollowerFollower)
-		bFemFolAssFol = !bFemFolAssFol
-		SetToggleOptionValue(oFemaleFollowerFollower, bFemFolAssFol)
-	ElseIf(option == oFemaleFollowerMale)
-		bFemFolAssMal = !bFemFolAssMal
-		SetToggleOptionValue(oFemaleFollowerMale, bFemFolAssMal)
-	ElseIf(option == oFemaleFollowerFemale)
-		bFemFolAssFem = !bFemFolAssFem
-		SetToggleOptionValue(oFemaleFollowerFemale, bFemFolAssFem)
-	ElseIf(option == oFemaleFollowerFuta)
-		bFemFolAssFut = !bFemFolAssFut
-		SetToggleOptionValue(oFemaleFollowerFuta, bFemFolAssFut)
-	ElseIf(option == oFemaleFollowerCreatureMale)
-		bFemFolAssCrM = !bFemFolAssCrM
-		SetToggleOptionValue(oFemaleFollowerCreatureMale, bFemFolAssCrM)
-	ElseIf(option == oFemaleFollowerCreatureFemale)
-		bFemFolAssCrF = !bFemFolAssCrF
-		SetToggleOptionValue(oFemaleFollowerCreatureFemale, bFemFolAssCrF)
-		; Futa Followers
-	ElseIf(option == oFutaFollowerPlayer)
-		bFutFolAssPl = !bFutFolAssPl
-		SetToggleOptionValue(oFutaFollowerPlayer, bFutFolAssPl)
-	ElseIf(option == oFutaFollowerFollower)
-		bFutFolAssFol = !bFutFolAssFol
-		SetToggleOptionValue(oFutaFollowerFollower, bFutFolAssFol)
-	ElseIf(option == oFutaFollowerMale)
-		bFutFolAssMal = !bFutFolAssMal
-		SetToggleOptionValue(oFutaFollowerMale, bFutFolAssMal)
-	ElseIf(option == oFutaFollowerFemale)
-		bFutFolAssFem = !bFutFolAssFem
-		SetToggleOptionValue(oFutaFollowerFemale, bFutFolAssFem)
-	ElseIf(option == oFutaFollowerFuta)
-		bFutFolAssFut = !bFutFolAssFut
-		SetToggleOptionValue(oFutaFollowerFuta, bFutFolAssFut)
-	ElseIf(option == oFutaFollowerCreatureMale)
-		bFutFolAssCrM = !bFutFolAssCrM
-		SetToggleOptionValue(oFutaFollowerCreatureMale, bFutFolAssCrM)
-	ElseIf(option == oFutaFollowerCreatureFemale)
-		bFutFolAssCrF = !bFutFolAssCrF
-		SetToggleOptionValue(oFutaFollowerCreatureFemale, bFutFolAssCrF)
-		; (Male) Creature Followers
-	ElseIf(option == oCreatureMaleFollowerPlayer)
-		bCrMFolAssPl = !bCrMFolAssPl
-		SetToggleOptionValue(oCreatureMaleFollowerPlayer, bCrMFolAssPl)
-	ElseIf(option == oCreatureMaleFollowerFollower)
-		bCrMFolAssFol = !bCrMFolAssFol
-		SetToggleOptionValue(oCreatureMaleFollowerFollower, bCrMFolAssFol)
-	ElseIf(option == oCreatureMaleFollowerMale)
-		bCrMFolAssMal = !bCrMFolAssMal
-		SetToggleOptionValue(oCreatureMaleFollowerMale, bCrMFolAssMal)
-	ElseIf(option == oCreatureMaleFollowerFemale)
-		bCrMFolAssFem = !bCrMFolAssFem
-		SetToggleOptionValue(oCreatureMaleFollowerFemale, bCrMFolAssFem)
-	ElseIf(option == oCreatureMaleFollowerFuta)
-		bCrMFolAssFut = !bCrMFolAssFut
-		SetToggleOptionValue(oCreatureMaleFollowerFuta, bCrMFolAssFut)
-	ElseIf(option == oCreatureMaleFollowerCreatureMale)
-		bCrMFolAssCrM = !bCrMFolAssCrM
-		SetToggleOptionValue(oCreatureMaleFollowerCreatureMale, bCrMFolAssCrM)
-	ElseIf(option == oCreatureMaleFollowerCreatureFemale)
-		bCrMFolAssCrF = !bCrMFolAssCrF
-		SetToggleOptionValue(oCreatureMaleFollowerCreatureFemale, bCrMFolAssCrF)
-		; Female Creature Followers
-	ElseIf(option == oCreatureFemaleFollowerPlayer)
-		bCrFFolAssPl = !bCrFFolAssPl
-		SetToggleOptionValue(oCreatureFemaleFollowerPlayer, bCrFFolAssPl)
-	ElseIf(option == oCreatureFemaleFollowerFollower)
-		bCrFFolAssFol = !bCrFFolAssFol
-		SetToggleOptionValue(oCreatureFemaleFollowerFollower, bCrFFolAssFol)
-	ElseIf(option == oCreatureFemaleFollowerMale)
-		bCrFFolAssMal = !bCrFFolAssMal
-		SetToggleOptionValue(oCreatureFemaleFollowerMale, bCrFFolAssMal)
-	ElseIf(option == oCreatureFemaleFollowerFemale)
-		bCrFFolAssFem = !bCrFFolAssFem
-		SetToggleOptionValue(oCreatureFemaleFollowerFemale, bCrFFolAssFem)
-	ElseIf(option == oCreatureFemaleFollowerFuta)
-		bCrFFolAssFut = !bCrFFolAssFut
-		SetToggleOptionValue(oCreatureFemaleFollowerFuta, bCrFFolAssFut)
-	ElseIf(option == oCreatureFemaleFollowerCreatureMale)
-		bCrFFolAssCrM = !bCrFFolAssCrM
-		SetToggleOptionValue(oCreatureFemaleFollowerCreatureMale, bCrFFolAssCrM)
-	ElseIf(option == oCreatureFemaleFollowerCreatureFemale)
-		bCrFFolAssCrF = !bCrFFolAssCrF
-		SetToggleOptionValue(oCreatureFemaleFollowerCreatureFemale, bCrFFolAssCrF)
-		; ======================== NPC/Creatures ========================
-		; Male NPCs
-	ElseIf(option == oMaleNPCPlayer)
-		bAssMalPl = !bAssMalPl
-		SetToggleOptionValue(oMaleNPCPlayer, bAssMalPl)
-	ElseIf(option == oMaleNPCFollower)
-		bAssMalFol = !bAssMalFol
-		SetToggleOptionValue(oMaleNPCFollower, bAssMalFol)
-	ElseIf(option == oMaleNPCMale)
-		bAssMalMal = !bAssMalMal
-		SetToggleOptionValue(oMaleNPCMale, bAssMalMal)
-	ElseIf(option == oMaleNPCFemale)
-		bAssMalFem = !bAssMalFem
-		SetToggleOptionValue(oMaleNPCFemale, bAssMalFem)
-	ElseIf(option == oMaleNPCFuta)
-		bAssMalFut = !bAssMalFut
-		SetToggleOptionValue(oMaleNPCFuta, bAssMalFut)
-	ElseIf(option == oMaleNPCCreatureMale)
-		bAssMalCreat = !bAssMalCreat
-		SetToggleOptionValue(oMaleNPCCreatureMale, bAssMalCreat)
-	ElseIf(option == oMaleNPCCreatureFemale)
-		bAssMalFemCreat = !bAssMalFemCreat
-		SetToggleOptionValue(oMaleNPCCreatureFemale, bAssMalFemCreat)
-		; Female NPCs
-	ElseIf(option == oFemaleNPCPlayer)
-		bAssFemPl = !bAssFemPl
-		SetToggleOptionValue(oFemaleNPCPlayer, bAssFemPl)
-	ElseIf(option == oFemaleNPCFollower)
-		bAssFemFol = !bAssFemFol
-		SetToggleOptionValue(oFemaleNPCFollower, bAssFemFol)
-	ElseIf(option == oFemaleNPCMale)
-		bAssFemMal = !bAssFemMal
-		SetToggleOptionValue(oFemaleNPCMale, bAssFemMal)
-	ElseIf(option == oFemaleNPCFemale)
-		bAssFemFem = !bAssFemFem
-		SetToggleOptionValue(oFemaleNPCFemale, bAssFemFem)
-	ElseIf(option == oFemaleNPCFuta)
-		bAssFemFut = !bAssFemFut
-		SetToggleOptionValue(oFemaleNPCFuta, bAssFemFut)
-	ElseIf(option == oFemaleNPCCreatureMale)
-		bAssFemCreat = !bAssFemCreat
-		SetToggleOptionValue(oFemaleNPCCreatureMale, bAssFemCreat)
-	ElseIf(option == oFemaleNPCCreatureFemale)
-		bAssFemFemCreat = !bAssFemFemCreat
-		SetToggleOptionValue(oFemaleNPCCreatureFemale, bAssFemFemCreat)
-		; Futa NPCs
-	ElseIf(option == oFutaNPCPlayer)
-		bAssFutPl = !bAssFutPl
-		SetToggleOptionValue(oFutaNPCPlayer, bAssFutPl)
-	ElseIf(option == oFutaNPCFollower)
-		bAssFutFol = !bAssFutFol
-		SetToggleOptionValue(oFutaNPCFollower, bAssFutFol)
-	ElseIf(option == oFutaNPCMale)
-		bAssFutMal = !bAssFutMal
-		SetToggleOptionValue(oFutaNPCMale, bAssFutMal)
-	ElseIf(option == oFutaNPCFemale)
-		bAssFutFem = !bAssFutFem
-		SetToggleOptionValue(oFutaNPCFemale, bAssFutFem)
-	ElseIf(option == oFutaNPCFuta)
-		bAssFutFut = !bAssFutFut
-		SetToggleOptionValue(oFutaNPCFuta, bAssFutFut)
-	ElseIf(option == oFutaNPCCreatureMale)
-		bAssFutCreat = !bAssFutCreat
-		SetToggleOptionValue(oFutaNPCCreatureMale, bAssFutCreat)
-	ElseIf(option == oFutaNPCCreatureFemale)
-		bAssFutFemCreat = !bAssFutFemCreat
-		SetToggleOptionValue(oFutaNPCCreatureFemale, bAssFutFemCreat)
-		; (Male) Creatures
-	ElseIf(option == oCreatureMaleNPCPlayer)
-		bAssMalCrPl = !bAssMalCrPl
-		SetToggleOptionValue(oCreatureMaleNPCPlayer, bAssMalCrPl)
-	ElseIf(option == oCreatureMaleNPCFollower)
-		bAssMalCrFol = !bAssMalCrFol
-		SetToggleOptionValue(oCreatureMaleNPCFollower, bAssMalCrFol)
-	ElseIf(option == oCreatureMaleNPCMale)
-		bAssMalCrMal = !bAssMalCrMal
-		SetToggleOptionValue(oCreatureMaleNPCMale, bAssMalCrMal)
-	ElseIf(option == oCreatureMaleNPCFemale)
-		bAssMalCrFem = !bAssMalCrFem
-		SetToggleOptionValue(oCreatureMaleNPCFemale, bAssMalCrFem)
-	ElseIf(option == oCreatureMaleNPCFuta)
-		bAssMalCrFut = !bAssMalCrFut
-		SetToggleOptionValue(oCreatureMaleNPCFuta, bAssMalCrFut)
-	ElseIf(option == oCreatureMaleNPCCreatureMale)
-		bAssMalCrCreat = !bAssMalCrCreat
-		SetToggleOptionValue(oCreatureMaleNPCCreatureMale, bAssMalCrCreat)
-	ElseIf(option == oCreatureMaleNPCCreatureFemale)
-		bAssMalCrFemCreat = !bAssMalCrFemCreat
-		SetToggleOptionValue(oCreatureMaleNPCCreatureFemale, bAssMalCrFemCreat)
-		; Female Creatures
-	ElseIf(option == oCreatureFemaleNPCPlayer)
-		bAssFemCrPl = !bAssFemCrPl
-		SetToggleOptionValue(oCreatureFemaleNPCPlayer, bAssFemCrPl)
-	ElseIf(option == oCreatureFemaleNPCFollower)
-		bAssFemCrFol = !bAssFemCrFol
-		SetToggleOptionValue(oCreatureFemaleNPCFollower, bAssFemCrFol)
-	ElseIf(option == oCreatureFemaleNPCMale)
-		bAssFemCrMal = !bAssFemCrMal
-		SetToggleOptionValue(oCreatureFemaleNPCMale, bAssFemCrMal)
-	ElseIf(option == oCreatureFemaleNPCFemale)
-		bAssFemCrFem = !bAssFemCrFem
-		SetToggleOptionValue(oCreatureFemaleNPCFemale, bAssFemCrFem)
-	ElseIf(option == oCreatureFemaleNPCFuta)
-		bAssFemCrFut = !bAssFemCrFut
-		SetToggleOptionValue(oCreatureFemaleNPCFuta, bAssFemCrFut)
-	ElseIf(option == oCreatureFemaleNPCCreatureMale)
-		bAssFemCrCreat = !bAssFemCrCreat
-		SetToggleOptionValue(oCreatureFemaleNPCCreatureMale, bAssFemCrCreat)
-	ElseIf(option == oCreatureFemaleNPCCreatureFemale)
-		bAssFemCrFemCreat = !bAssFemCrFemCreat
-		SetToggleOptionValue(oCreatureFemaleNPCCreatureFemale, bAssFemCrFemCreat)
-	EndIf
+  ; ======================== Profile ========================
+  ; ========================= Sheep =========================
+  If(option == allowPlSheep)
+    bEngagePlSheep = !bEngagePlSheep
+    If(bEngagePlSheep)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "PreferPlSheep")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "PreferPlSheep")
+    EndIf
+    SetToggleOptionValue(allowPlSheep, bEngagePlSheep)
+  ElseIf(option == allowFolSheep)
+    bEngageFolSheep = !bEngageFolSheep
+    If(bEngageFolSheep)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictFolGenderSheep")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictFolGenderSheep")
+    EndIf
+    SetToggleOptionValue(allowFolSheep, bEngageFolSheep)
+  ElseIf(option == allowNPCSheep)
+    bEngageNPCSheep = !bEngageNPCSheep
+    If(bEngageNPCSheep)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictNPCGenderSheep")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictNPCGenderSheep")
+    EndIf
+    SetToggleOptionValue(allowNPCSheep, bEngageNPCSheep)
+  ElseIf(option == allowCrtSheep)
+    bEngageCreatureSheep = !bEngageCreatureSheep
+    If(bEngageCreatureSheep)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictCrtGenderSheep")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictCrtGenderSheep")
+    EndIf
+    SetToggleOptionValue(allowCrtSheep, bEngageCreatureSheep)
+  ElseIf(option == allowMalSheep)
+    bEngageMaleSheep = !bEngageMaleSheep
+    SetToggleOptionValue(allowMalSheep, bEngageMaleSheep)
+  ElseIf(option == allowFemSheep)
+    bEngageFemaleSheep = !bEngageFemaleSheep
+    SetToggleOptionValue(allowFemSheep, bEngageFemaleSheep)
+  ElseIf(option == allowFutSheep)
+    bEngageFutaSheep = !bEngageFutaSheep
+    SetToggleOptionValue(allowFutSheep, bEngageFutaSheep)
+  ElseIf(option == ArousalSheep)
+    bUseArousalSheep = !bUseArousalSheep
+    If(bUseArousalSheep)
+      SetOptionFlagsST(OPTION_FLAG_NONE, true, "ArousThreshSheep")
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "IgnoreVicArousalSheep")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, true, "ArousThreshSheep")
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "IgnoreVicArousalSheep")
+    EndIf
+    SetToggleOptionValue(ArousalSheep, bUseArousalSheep)
+  ElseIf(option == LOSSheep)
+    bUseLoSSheep = !bUseLoSSheep
+    SetToggleOptionValue(LOSSheep, bUseLoSSheep)
+  ElseIf(option == DistanceSheep)
+    bUseDistSheep = !bUseDistSheep
+    If(bUseDistSheep)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "maxDistanceSheep")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "maxDistanceSheep")
+    EndIf
+    SetToggleOptionValue(DistanceSheep, bUseDistSheep)
+  ElseIf(option == allowCrMSheep)
+    bEngageCrMSheep = !bEngageCrMSheep
+    SetToggleOptionValue(allowCrMSheep, bEngageCrMSheep)
+  ElseIf(option == allowCrFSheep)
+    bEngageCrFSheep = !bEngageCrFSheep
+    SetToggleOptionValue(allowCrFSheep, bEngageCrFSheep)
+    ; ========================= Wolf =========================
+  ElseIf(option == allowPlWolf)
+    bEngagePlWolf = !bEngagePlWolf
+    If(bEngagePlWolf)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "PreferPlWolf")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "PreferPlWolf")
+    EndIf
+    SetToggleOptionValue(allowPlWolf, bEngagePlWolf)
+  ElseIf(option == allowFolWolf)
+    bEngageFolWolf = !bEngageFolWolf
+    If(bEngageFolWolf)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictFolGenderWolf")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictFolGenderWolf")
+    EndIf
+    SetToggleOptionValue(allowFolWolf, bEngageFolWolf)
+  ElseIf(option == allowNPCWolf)
+    bEngageNPCWolf = !bEngageNPCWolf
+    If(bEngageNPCWolf)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictNPCGenderWolf")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictNPCGenderWolf")
+    EndIf
+    SetToggleOptionValue(allowNPCWolf, bEngageNPCWolf)
+  ElseIf(option == allowCrtWolf)
+    bEngageCreatureWolf = !bEngageCreatureWolf
+    If(bEngageCreatureWolf)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictCrtGenderWolf")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictCrtGenderWolf")
+    EndIf
+    SetToggleOptionValue(allowCrtWolf, bEngageCreatureWolf)
+  ElseIf(option == allowMalWolf)
+    bEngageMaleWolf = !bEngageMaleWolf
+    SetToggleOptionValue(allowMalWolf, bEngageMaleWolf)
+  ElseIf(option == allowFemWolf)
+    bEngageFemaleWolf = !bEngageFemaleWolf
+    SetToggleOptionValue(allowFemWolf, bEngageFemaleWolf)
+  ElseIf(option == allowFutWolf)
+    bEngageFutaWolf = !bEngageFutaWolf
+    SetToggleOptionValue(allowFutWolf, bEngageFutaWolf)
+  ElseIf(option == ArousalWolf)
+    bUseArousalWolf = !bUseArousalWolf
+    If(bUseArousalWolf)
+      SetOptionFlagsST(OPTION_FLAG_NONE, true, "ArousThreshWolf")
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "IgnoreVicArousalWolf")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, true, "ArousThreshWolf")
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "IgnoreVicArousalWolf")
+    EndIf
+    SetToggleOptionValue(ArousalWolf, bUseArousalWolf)
+  ElseIf(option == LOSWolf)
+    bUseLoSWolf = !bUseLoSWolf
+    SetToggleOptionValue(LOSWolf, bUseLoSWolf)
+  ElseIf(option == DistanceWolf)
+    bUseDistWolf = !bUseDistWolf
+    If(bUseDistWolf)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "maxDistanceWolf")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "maxDistanceWolf")
+    EndIf
+    SetToggleOptionValue(DistanceWolf, bUseDistWolf)
+  ElseIf(option == allowCrMWolf)
+    bEngageCrMWolf = !bEngageCrMWolf
+    SetToggleOptionValue(allowCrMWolf, bEngageCrMWolf)
+  ElseIf(option == allowCrFWolf)
+    bEngageCrFWolf = !bEngageCrFWolf
+    SetToggleOptionValue(allowCrFWolf, bEngageCrFWolf)
+    ; ========================= Bunny =========================
+  ElseIf(option == allowPlBunny)
+    bEngagePlBunny = !bEngagePlBunny
+    If(bEngagePlBunny)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "PreferPlBunny")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "PreferPlBunny")
+    EndIf
+    SetToggleOptionValue(allowPlBunny, bEngagePlBunny)
+  ElseIf(option == allowFolBunny)
+    bEngageFolBunny = !bEngageFolBunny
+    If(bEngageFolBunny)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictFolGenderBunny")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictFolGenderBunny")
+    EndIf
+    SetToggleOptionValue(allowFolBunny, bEngageFolBunny)
+  ElseIf(option == allowNPCBunny)
+    bEngageNPCBunny = !bEngageNPCBunny
+    If(bEngageNPCBunny)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictNPCGenderBunny")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictNPCGenderBunny")
+    EndIf
+    SetToggleOptionValue(allowNPCBunny, bEngageNPCBunny)
+  ElseIf(option == allowCrtBunny)
+    bEngageCreatureBunny = !bEngageCreatureBunny
+    If(bEngageCreatureBunny)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "RestrictCrtGenderBunny")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "RestrictCrtGenderBunny")
+    EndIf
+    SetToggleOptionValue(allowCrtBunny, bEngageCreatureBunny)
+  ElseIf(option == allowMalBunny)
+    bEngageMaleBunny = !bEngageMaleBunny
+    SetToggleOptionValue(allowMalBunny, bEngageMaleBunny)
+  ElseIf(option == allowFemBunny)
+    bEngageFemaleBunny = !bEngageFemaleBunny
+    SetToggleOptionValue(allowFemBunny, bEngageFemaleBunny)
+  ElseIf(option == allowFutBunny)
+    bEngageFutaBunny = !bEngageFutaBunny
+    SetToggleOptionValue(allowFutBunny, bEngageFutaBunny)
+  ElseIf(option == ArousalBunny)
+    bUseArousalBunny = !bUseArousalBunny
+    If(bUseArousalBunny)
+      SetOptionFlagsST(OPTION_FLAG_NONE, true, "ArousThreshBunny")
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "IgnoreVicArousalBunny")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, true, "ArousThreshBunny")
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "IgnoreVicArousalBunny")
+    EndIf
+    SetToggleOptionValue(ArousalBunny, bUseArousalBunny)
+  ElseIf(option == LOSBunny)
+    bUseLoSBunny = !bUseLoSBunny
+    SetToggleOptionValue(LOSBunny, bUseLoSBunny)
+  ElseIf(option == DistanceBunny)
+    bUseDistBunny = !bUseDistBunny
+    If(bUseDistBunny)
+      SetOptionFlagsST(OPTION_FLAG_NONE, false, "maxDistanceBunny")
+    else
+      SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "maxDistanceBunny")
+    EndIf
+    SetToggleOptionValue(DistanceBunny, bUseDistBunny)
+  ElseIf(option == allowCrMBunny)
+    bEngageCrMBunny = !bEngageCrMBunny
+    SetToggleOptionValue(allowCrMBunny, bEngageCrMBunny)
+  ElseIf(option == allowCrFBunny)
+    bEngageCrFBunny = !bEngageCrFBunny
+    SetToggleOptionValue(allowCrFBunny, bEngageCrFBunny)
+    ; ========================= Filter =========================
+    ; ======================== Follower ========================
+    ; Male Followers
+  ElseIf(option == oMaleFollowerPlayer)
+    bMalFolAssPl = !bMalFolAssPl
+    SetToggleOptionValue(oMaleFollowerPlayer, bMalFolAssPl)
+  ElseIf(option == oMaleFollowerFollower)
+    bMalFolAssFol = !bMalFolAssFol
+      SetToggleOptionValue(oMaleFollowerFollower, bMalFolAssFol)
+  ElseIf(option == oMaleFollowerMale)
+    bMalFolAssMal = !bMalFolAssMal
+    SetToggleOptionValue(oMaleFollowerMale, bMalFolAssMal)
+  ElseIf(option == oMaleFollowerFemale)
+    bMalFolAssFem = !bMalFolAssFem
+    SetToggleOptionValue(oMaleFollowerFemale, bMalFolAssFem)
+  ElseIf(option == oMaleFollowerFuta)
+    bMalFolAssFut = !bMalFolAssFut
+    SetToggleOptionValue(oMaleFollowerFuta, bMalFolAssFut)
+  ElseIf(option == oMaleFollowerCreatureMale)
+    bMalFolAssCrM = !bMalFolAssCrM
+    SetToggleOptionValue(oMaleFollowerCreatureMale, bMalFolAssCrM)
+  ElseIf(option == oMaleFollowerCreatureFemale)
+    bMalFolAssCrF = !bMalFolAssCrF
+    SetToggleOptionValue(oMaleFollowerCreatureFemale, bMalFolAssCrF)
+    ; Female Followers
+  ElseIf(option == oFemaleFollowerPlayer)
+    bFemFolAssPl = !bFemFolAssPl
+    SetToggleOptionValue(oFemaleFollowerPlayer, bFemFolAssPl)
+  ElseIf(option == oFemaleFollowerFollower)
+    bFemFolAssFol = !bFemFolAssFol
+    SetToggleOptionValue(oFemaleFollowerFollower, bFemFolAssFol)
+  ElseIf(option == oFemaleFollowerMale)
+    bFemFolAssMal = !bFemFolAssMal
+    SetToggleOptionValue(oFemaleFollowerMale, bFemFolAssMal)
+  ElseIf(option == oFemaleFollowerFemale)
+    bFemFolAssFem = !bFemFolAssFem
+    SetToggleOptionValue(oFemaleFollowerFemale, bFemFolAssFem)
+  ElseIf(option == oFemaleFollowerFuta)
+    bFemFolAssFut = !bFemFolAssFut
+    SetToggleOptionValue(oFemaleFollowerFuta, bFemFolAssFut)
+  ElseIf(option == oFemaleFollowerCreatureMale)
+    bFemFolAssCrM = !bFemFolAssCrM
+    SetToggleOptionValue(oFemaleFollowerCreatureMale, bFemFolAssCrM)
+  ElseIf(option == oFemaleFollowerCreatureFemale)
+    bFemFolAssCrF = !bFemFolAssCrF
+    SetToggleOptionValue(oFemaleFollowerCreatureFemale, bFemFolAssCrF)
+    ; Futa Followers
+  ElseIf(option == oFutaFollowerPlayer)
+    bFutFolAssPl = !bFutFolAssPl
+    SetToggleOptionValue(oFutaFollowerPlayer, bFutFolAssPl)
+  ElseIf(option == oFutaFollowerFollower)
+    bFutFolAssFol = !bFutFolAssFol
+    SetToggleOptionValue(oFutaFollowerFollower, bFutFolAssFol)
+  ElseIf(option == oFutaFollowerMale)
+    bFutFolAssMal = !bFutFolAssMal
+    SetToggleOptionValue(oFutaFollowerMale, bFutFolAssMal)
+  ElseIf(option == oFutaFollowerFemale)
+    bFutFolAssFem = !bFutFolAssFem
+    SetToggleOptionValue(oFutaFollowerFemale, bFutFolAssFem)
+  ElseIf(option == oFutaFollowerFuta)
+    bFutFolAssFut = !bFutFolAssFut
+    SetToggleOptionValue(oFutaFollowerFuta, bFutFolAssFut)
+  ElseIf(option == oFutaFollowerCreatureMale)
+    bFutFolAssCrM = !bFutFolAssCrM
+    SetToggleOptionValue(oFutaFollowerCreatureMale, bFutFolAssCrM)
+  ElseIf(option == oFutaFollowerCreatureFemale)
+    bFutFolAssCrF = !bFutFolAssCrF
+    SetToggleOptionValue(oFutaFollowerCreatureFemale, bFutFolAssCrF)
+    ; (Male) Creature Followers
+  ElseIf(option == oCreatureMaleFollowerPlayer)
+    bCrMFolAssPl = !bCrMFolAssPl
+    SetToggleOptionValue(oCreatureMaleFollowerPlayer, bCrMFolAssPl)
+  ElseIf(option == oCreatureMaleFollowerFollower)
+    bCrMFolAssFol = !bCrMFolAssFol
+    SetToggleOptionValue(oCreatureMaleFollowerFollower, bCrMFolAssFol)
+  ElseIf(option == oCreatureMaleFollowerMale)
+    bCrMFolAssMal = !bCrMFolAssMal
+    SetToggleOptionValue(oCreatureMaleFollowerMale, bCrMFolAssMal)
+  ElseIf(option == oCreatureMaleFollowerFemale)
+    bCrMFolAssFem = !bCrMFolAssFem
+    SetToggleOptionValue(oCreatureMaleFollowerFemale, bCrMFolAssFem)
+  ElseIf(option == oCreatureMaleFollowerFuta)
+    bCrMFolAssFut = !bCrMFolAssFut
+    SetToggleOptionValue(oCreatureMaleFollowerFuta, bCrMFolAssFut)
+  ElseIf(option == oCreatureMaleFollowerCreatureMale)
+    bCrMFolAssCrM = !bCrMFolAssCrM
+    SetToggleOptionValue(oCreatureMaleFollowerCreatureMale, bCrMFolAssCrM)
+  ElseIf(option == oCreatureMaleFollowerCreatureFemale)
+    bCrMFolAssCrF = !bCrMFolAssCrF
+    SetToggleOptionValue(oCreatureMaleFollowerCreatureFemale, bCrMFolAssCrF)
+    ; Female Creature Followers
+  ElseIf(option == oCreatureFemaleFollowerPlayer)
+    bCrFFolAssPl = !bCrFFolAssPl
+    SetToggleOptionValue(oCreatureFemaleFollowerPlayer, bCrFFolAssPl)
+  ElseIf(option == oCreatureFemaleFollowerFollower)
+    bCrFFolAssFol = !bCrFFolAssFol
+    SetToggleOptionValue(oCreatureFemaleFollowerFollower, bCrFFolAssFol)
+  ElseIf(option == oCreatureFemaleFollowerMale)
+    bCrFFolAssMal = !bCrFFolAssMal
+    SetToggleOptionValue(oCreatureFemaleFollowerMale, bCrFFolAssMal)
+  ElseIf(option == oCreatureFemaleFollowerFemale)
+    bCrFFolAssFem = !bCrFFolAssFem
+    SetToggleOptionValue(oCreatureFemaleFollowerFemale, bCrFFolAssFem)
+  ElseIf(option == oCreatureFemaleFollowerFuta)
+    bCrFFolAssFut = !bCrFFolAssFut
+    SetToggleOptionValue(oCreatureFemaleFollowerFuta, bCrFFolAssFut)
+  ElseIf(option == oCreatureFemaleFollowerCreatureMale)
+    bCrFFolAssCrM = !bCrFFolAssCrM
+    SetToggleOptionValue(oCreatureFemaleFollowerCreatureMale, bCrFFolAssCrM)
+  ElseIf(option == oCreatureFemaleFollowerCreatureFemale)
+    bCrFFolAssCrF = !bCrFFolAssCrF
+    SetToggleOptionValue(oCreatureFemaleFollowerCreatureFemale, bCrFFolAssCrF)
+    ; ======================== NPC/Creatures ========================
+    ; Male NPCs
+  ElseIf(option == oMaleNPCPlayer)
+    bAssMalPl = !bAssMalPl
+    SetToggleOptionValue(oMaleNPCPlayer, bAssMalPl)
+  ElseIf(option == oMaleNPCFollower)
+    bAssMalFol = !bAssMalFol
+    SetToggleOptionValue(oMaleNPCFollower, bAssMalFol)
+  ElseIf(option == oMaleNPCMale)
+    bAssMalMal = !bAssMalMal
+    SetToggleOptionValue(oMaleNPCMale, bAssMalMal)
+  ElseIf(option == oMaleNPCFemale)
+    bAssMalFem = !bAssMalFem
+    SetToggleOptionValue(oMaleNPCFemale, bAssMalFem)
+  ElseIf(option == oMaleNPCFuta)
+    bAssMalFut = !bAssMalFut
+    SetToggleOptionValue(oMaleNPCFuta, bAssMalFut)
+  ElseIf(option == oMaleNPCCreatureMale)
+    bAssMalCreat = !bAssMalCreat
+    SetToggleOptionValue(oMaleNPCCreatureMale, bAssMalCreat)
+  ElseIf(option == oMaleNPCCreatureFemale)
+    bAssMalFemCreat = !bAssMalFemCreat
+    SetToggleOptionValue(oMaleNPCCreatureFemale, bAssMalFemCreat)
+    ; Female NPCs
+  ElseIf(option == oFemaleNPCPlayer)
+    bAssFemPl = !bAssFemPl
+    SetToggleOptionValue(oFemaleNPCPlayer, bAssFemPl)
+  ElseIf(option == oFemaleNPCFollower)
+    bAssFemFol = !bAssFemFol
+    SetToggleOptionValue(oFemaleNPCFollower, bAssFemFol)
+  ElseIf(option == oFemaleNPCMale)
+    bAssFemMal = !bAssFemMal
+    SetToggleOptionValue(oFemaleNPCMale, bAssFemMal)
+  ElseIf(option == oFemaleNPCFemale)
+    bAssFemFem = !bAssFemFem
+    SetToggleOptionValue(oFemaleNPCFemale, bAssFemFem)
+  ElseIf(option == oFemaleNPCFuta)
+    bAssFemFut = !bAssFemFut
+    SetToggleOptionValue(oFemaleNPCFuta, bAssFemFut)
+  ElseIf(option == oFemaleNPCCreatureMale)
+    bAssFemCreat = !bAssFemCreat
+    SetToggleOptionValue(oFemaleNPCCreatureMale, bAssFemCreat)
+  ElseIf(option == oFemaleNPCCreatureFemale)
+    bAssFemFemCreat = !bAssFemFemCreat
+    SetToggleOptionValue(oFemaleNPCCreatureFemale, bAssFemFemCreat)
+    ; Futa NPCs
+  ElseIf(option == oFutaNPCPlayer)
+    bAssFutPl = !bAssFutPl
+    SetToggleOptionValue(oFutaNPCPlayer, bAssFutPl)
+  ElseIf(option == oFutaNPCFollower)
+    bAssFutFol = !bAssFutFol
+    SetToggleOptionValue(oFutaNPCFollower, bAssFutFol)
+  ElseIf(option == oFutaNPCMale)
+    bAssFutMal = !bAssFutMal
+    SetToggleOptionValue(oFutaNPCMale, bAssFutMal)
+  ElseIf(option == oFutaNPCFemale)
+    bAssFutFem = !bAssFutFem
+    SetToggleOptionValue(oFutaNPCFemale, bAssFutFem)
+  ElseIf(option == oFutaNPCFuta)
+    bAssFutFut = !bAssFutFut
+    SetToggleOptionValue(oFutaNPCFuta, bAssFutFut)
+  ElseIf(option == oFutaNPCCreatureMale)
+    bAssFutCreat = !bAssFutCreat
+    SetToggleOptionValue(oFutaNPCCreatureMale, bAssFutCreat)
+  ElseIf(option == oFutaNPCCreatureFemale)
+    bAssFutFemCreat = !bAssFutFemCreat
+    SetToggleOptionValue(oFutaNPCCreatureFemale, bAssFutFemCreat)
+    ; (Male) Creatures
+  ElseIf(option == oCreatureMaleNPCPlayer)
+    bAssMalCrPl = !bAssMalCrPl
+    SetToggleOptionValue(oCreatureMaleNPCPlayer, bAssMalCrPl)
+  ElseIf(option == oCreatureMaleNPCFollower)
+    bAssMalCrFol = !bAssMalCrFol
+    SetToggleOptionValue(oCreatureMaleNPCFollower, bAssMalCrFol)
+  ElseIf(option == oCreatureMaleNPCMale)
+    bAssMalCrMal = !bAssMalCrMal
+    SetToggleOptionValue(oCreatureMaleNPCMale, bAssMalCrMal)
+  ElseIf(option == oCreatureMaleNPCFemale)
+    bAssMalCrFem = !bAssMalCrFem
+    SetToggleOptionValue(oCreatureMaleNPCFemale, bAssMalCrFem)
+  ElseIf(option == oCreatureMaleNPCFuta)
+    bAssMalCrFut = !bAssMalCrFut
+    SetToggleOptionValue(oCreatureMaleNPCFuta, bAssMalCrFut)
+  ElseIf(option == oCreatureMaleNPCCreatureMale)
+    bAssMalCrCreat = !bAssMalCrCreat
+    SetToggleOptionValue(oCreatureMaleNPCCreatureMale, bAssMalCrCreat)
+  ElseIf(option == oCreatureMaleNPCCreatureFemale)
+    bAssMalCrFemCreat = !bAssMalCrFemCreat
+    SetToggleOptionValue(oCreatureMaleNPCCreatureFemale, bAssMalCrFemCreat)
+    ; Female Creatures
+  ElseIf(option == oCreatureFemaleNPCPlayer)
+    bAssFemCrPl = !bAssFemCrPl
+    SetToggleOptionValue(oCreatureFemaleNPCPlayer, bAssFemCrPl)
+  ElseIf(option == oCreatureFemaleNPCFollower)
+    bAssFemCrFol = !bAssFemCrFol
+    SetToggleOptionValue(oCreatureFemaleNPCFollower, bAssFemCrFol)
+  ElseIf(option == oCreatureFemaleNPCMale)
+    bAssFemCrMal = !bAssFemCrMal
+    SetToggleOptionValue(oCreatureFemaleNPCMale, bAssFemCrMal)
+  ElseIf(option == oCreatureFemaleNPCFemale)
+    bAssFemCrFem = !bAssFemCrFem
+    SetToggleOptionValue(oCreatureFemaleNPCFemale, bAssFemCrFem)
+  ElseIf(option == oCreatureFemaleNPCFuta)
+    bAssFemCrFut = !bAssFemCrFut
+    SetToggleOptionValue(oCreatureFemaleNPCFuta, bAssFemCrFut)
+  ElseIf(option == oCreatureFemaleNPCCreatureMale)
+    bAssFemCrCreat = !bAssFemCrCreat
+    SetToggleOptionValue(oCreatureFemaleNPCCreatureMale, bAssFemCrCreat)
+  ElseIf(option == oCreatureFemaleNPCCreatureFemale)
+    bAssFemCrFemCreat = !bAssFemCrFemCreat
+    SetToggleOptionValue(oCreatureFemaleNPCCreatureFemale, bAssFemCrFemCreat)
+  EndIf
 EndEvent
 
 Event OnOptionInputOpen(int option)
-	If(option == o2PFemaleMale)
-		SetInputDialogStartText(s2PFM)
-	ElseIf(option == o2PMaleFemale)
-		SetInputDialogStartText(s2PMF)
-	ElseIf(option == o2PFemaleFemale)
-		SetInputDialogStartText(s2PFF)
-	ElseIf(option == o2PMaleMale)
-		SetInputDialogStartText(s2PMM)
-	ElseIf(option == o3PFemaleFirst)
-		SetInputDialogStartText(s3PF)
-	ElseIf(option == o3PMaleFirst)
-		SetInputDialogStartText(s3PM)
-	ElseIf(option == o4PFemaleFirst)
-		SetInputDialogStartText(s4PM)
-	ElseIf(option == o4PMaleFirst)
-		SetInputDialogStartText(s4PF)
-	ElseIf(option == o5PFemaleFirst)
-		SetInputDialogStartText(s5PM)
-	ElseIf(option == o5PMaleFirst)
-		SetInputDialogStartText(s5PF)
-	EndIf
+  If(option == o2PFemaleMale)
+    SetInputDialogStartText(s2PFM)
+  ElseIf(option == o2PMaleFemale)
+    SetInputDialogStartText(s2PMF)
+  ElseIf(option == o2PFemaleFemale)
+    SetInputDialogStartText(s2PFF)
+  ElseIf(option == o2PMaleMale)
+    SetInputDialogStartText(s2PMM)
+  ElseIf(option == o3PFemaleFirst)
+    SetInputDialogStartText(s3PF)
+  ElseIf(option == o3PMaleFirst)
+    SetInputDialogStartText(s3PM)
+  ElseIf(option == o4PFemaleFirst)
+    SetInputDialogStartText(s4PM)
+  ElseIf(option == o4PMaleFirst)
+    SetInputDialogStartText(s4PF)
+  ElseIf(option == o5PFemaleFirst)
+    SetInputDialogStartText(s5PM)
+  ElseIf(option == o5PMaleFirst)
+    SetInputDialogStartText(s5PF)
+  EndIf
 EndEvent
 
 Event OnOptionInputAccept(int option, string newString)
-	If(option == o2PFemaleMale)
-		s2PFM = newString
-		SetInputOptionValue(o2PFemaleMale, s2PFM)
-	ElseIf(option == o2PMaleFemale)
-		s2PMF = newString
-		SetInputOptionValue(o2PMaleFemale, s2PMF)
-	ElseIf(option == o2PFemaleFemale)
-		s2PFF = newString
-		SetInputOptionValue(o2PFemaleFemale, s2PFF)
-	ElseIf(option == o2PMaleMale)
-		s2PMM = newString
-		SetInputOptionValue(o2PMaleMale, s2PMM)
-	ElseIf(option == o3PFemaleFirst)
-		s3PF = newString
-		SetInputOptionValue(o3PFemaleFirst, s3PF)
-	ElseIf(option == o3PMaleFirst)
-		s3PM = newString
-		SetInputOptionValue(o3PMaleFirst, s3PM)
-	ElseIf(option == o4PFemaleFirst)
-		s4PM = newString
-		SetInputOptionValue(o4PFemaleFirst, s4PM)
-	ElseIf(option == o4PMaleFirst)
-		s4PF = newString
-		SetInputOptionValue(o4PMaleFirst, s4PF)
-	ElseIf(option == o5PFemaleFirst)
-		s5PM = newString
-		SetInputOptionValue(o5PFemaleFirst, s5PM)
-	ElseIf(option == o5PMaleFirst)
-		s5PF = newString
-		SetInputOptionValue(o5PMaleFirst, s5PF)
-	EndIf
+  If(option == o2PFemaleMale)
+    s2PFM = newString
+    SetInputOptionValue(o2PFemaleMale, s2PFM)
+  ElseIf(option == o2PMaleFemale)
+    s2PMF = newString
+    SetInputOptionValue(o2PMaleFemale, s2PMF)
+  ElseIf(option == o2PFemaleFemale)
+    s2PFF = newString
+    SetInputOptionValue(o2PFemaleFemale, s2PFF)
+  ElseIf(option == o2PMaleMale)
+    s2PMM = newString
+    SetInputOptionValue(o2PMaleMale, s2PMM)
+  ElseIf(option == o3PFemaleFirst)
+    s3PF = newString
+    SetInputOptionValue(o3PFemaleFirst, s3PF)
+  ElseIf(option == o3PMaleFirst)
+    s3PM = newString
+    SetInputOptionValue(o3PMaleFirst, s3PM)
+  ElseIf(option == o4PFemaleFirst)
+    s4PM = newString
+    SetInputOptionValue(o4PFemaleFirst, s4PM)
+  ElseIf(option == o4PMaleFirst)
+    s4PF = newString
+    SetInputOptionValue(o4PMaleFirst, s4PF)
+  ElseIf(option == o5PFemaleFirst)
+    s5PM = newString
+    SetInputOptionValue(o5PFemaleFirst, s5PM)
+  ElseIf(option == o5PMaleFirst)
+    s5PF = newString
+    SetInputOptionValue(o5PMaleFirst, s5PF)
+  EndIf
 EndEvent
 
 Event OnOptionMenuOpen(int option)
-	If(option == oLocWild)
-		SetMenuDialogStartIndex(iWildIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocCities)
-		SetMenuDialogStartIndex(iCityIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocTowns)
-		SetMenuDialogStartIndex(iTownIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocSettlement)
-		SetMenuDialogStartIndex(iSettlementIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocPlayerHome)
-		SetMenuDialogStartIndex(iPlayerHomeIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocInn)
-		SetMenuDialogStartIndex(iInnIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocFriendlyLoc)
-		SetMenuDialogStartIndex(iFriendLocIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocDragonLair)
-		SetMenuDialogStartIndex(iDragonIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocNordicRuin)
-		SetMenuDialogStartIndex(iNoridRuinIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocDwarvenRuin)
-		SetMenuDialogStartIndex(iDwarvenRuinIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocCaves)
-		SetMenuDialogStartIndex(iCavesIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocFalmerHive)
-		SetMenuDialogStartIndex(iFalmerIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocFort)
-		SetMenuDialogStartIndex(iFortIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocBanditCamp)
-		SetMenuDialogStartIndex(iBanditIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocGiantCamp)
-		SetMenuDialogStartIndex(iGiantIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocHagNest)
-		SetMenuDialogStartIndex(iHagravenIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	ElseIf(option == oLocHostileLoc)
-		SetMenuDialogStartIndex(iHostileLocIndex)
-		SetMenuDialogDefaultIndex(1)
-		SetMenuDialogOptions(ProfileList)
-	EndIf
+  If(option == oLocWild)
+    SetMenuDialogStartIndex(iWildIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocCities)
+    SetMenuDialogStartIndex(iCityIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocTowns)
+    SetMenuDialogStartIndex(iTownIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocSettlement)
+    SetMenuDialogStartIndex(iSettlementIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocPlayerHome)
+    SetMenuDialogStartIndex(iPlayerHomeIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocInn)
+    SetMenuDialogStartIndex(iInnIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocFriendlyLoc)
+    SetMenuDialogStartIndex(iFriendLocIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocDragonLair)
+    SetMenuDialogStartIndex(iDragonIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocNordicRuin)
+    SetMenuDialogStartIndex(iNoridRuinIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocDwarvenRuin)
+    SetMenuDialogStartIndex(iDwarvenRuinIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocCaves)
+    SetMenuDialogStartIndex(iCavesIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocFalmerHive)
+    SetMenuDialogStartIndex(iFalmerIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocFort)
+    SetMenuDialogStartIndex(iFortIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocBanditCamp)
+    SetMenuDialogStartIndex(iBanditIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocGiantCamp)
+    SetMenuDialogStartIndex(iGiantIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocHagNest)
+    SetMenuDialogStartIndex(iHagravenIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  ElseIf(option == oLocHostileLoc)
+    SetMenuDialogStartIndex(iHostileLocIndex)
+    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogOptions(ProfileList)
+  EndIf
 EndEvent
 
 Event OnOptionMenuAccept(int option, int index)
-	If(option == oLocWild)
-		iWildIndex = index
-		SetMenuOptionValue(oLocWild, ProfileList[iWildIndex])
-	ElseIf(option == oLocCities)
-		iCityIndex = index
-		SetMenuOptionValueST(ProfileList[iCityIndex])
-	ElseIf(option == oLocTowns)
-		iTownIndex = index
-		SetMenuOptionValueST(ProfileList[iTownIndex])
-	ElseIf(option == oLocSettlement)
-		iSettlementIndex = index
-		SetMenuOptionValueST(ProfileList[iSettlementIndex])
-	ElseIf(option == oLocPlayerHome)
-		iPlayerHomeIndex = index
-		SetMenuOptionValueST(ProfileList[iPlayerHomeIndex])
-	ElseIf(option == oLocInn)
-		iInnIndex = index
-		SetMenuOptionValueST(ProfileList[iInnIndex])
-	ElseIf(option == oLocFriendlyLoc)
-		iFriendLocIndex = index
-		SetMenuOptionValueST(ProfileList[iFriendLocIndex])
-	ElseIf(option == oLocDragonLair)
-		iDragonIndex = index
-		SetMenuOptionValueST(ProfileList[iDragonIndex])
-	ElseIf(option == oLocNordicRuin)
-		iNoridRuinIndex = index
-		SetMenuOptionValueST(ProfileList[iNoridRuinIndex])
-	ElseIf(option == oLocDwarvenRuin)
-		iDwarvenRuinIndex = index
-		SetMenuOptionValueST(ProfileList[iDwarvenRuinIndex])
-	ElseIf(option == oLocCaves)
-		iCavesIndex = index
-		SetMenuOptionValueST(ProfileList[iCavesIndex])
-	ElseIf(option == oLocFalmerHive)
-		iFalmerIndex = index
-		SetMenuOptionValueST(ProfileList[iFalmerIndex])
-	ElseIf(option == oLocFort)
-		iFortIndex = index
-		SetMenuOptionValueST(ProfileList[iFortIndex])
-	ElseIf(option == oLocBanditCamp)
-		iBanditIndex = index
-		SetMenuOptionValueST(ProfileList[iBanditIndex])
-	ElseIf(option == oLocGiantCamp)
-		iGiantIndex = index
-		SetMenuOptionValueST(ProfileList[iGiantIndex])
-	ElseIf(option == oLocHagNest)
-		iHagravenIndex = index
-		SetMenuOptionValueST(ProfileList[iHagravenIndex])
-	ElseIf(option == oLocHostileLoc)
-		iHostileLocIndex = index
-		SetMenuOptionValueST(ProfileList[iHostileLocIndex])
-	EndIf
+  If(option == oLocWild)
+    iWildIndex = index
+    SetMenuOptionValue(oLocWild, ProfileList[iWildIndex])
+  ElseIf(option == oLocCities)
+    iCityIndex = index
+    SetMenuOptionValueST(ProfileList[iCityIndex])
+  ElseIf(option == oLocTowns)
+    iTownIndex = index
+    SetMenuOptionValueST(ProfileList[iTownIndex])
+  ElseIf(option == oLocSettlement)
+    iSettlementIndex = index
+    SetMenuOptionValueST(ProfileList[iSettlementIndex])
+  ElseIf(option == oLocPlayerHome)
+    iPlayerHomeIndex = index
+    SetMenuOptionValueST(ProfileList[iPlayerHomeIndex])
+  ElseIf(option == oLocInn)
+    iInnIndex = index
+    SetMenuOptionValueST(ProfileList[iInnIndex])
+  ElseIf(option == oLocFriendlyLoc)
+    iFriendLocIndex = index
+    SetMenuOptionValueST(ProfileList[iFriendLocIndex])
+  ElseIf(option == oLocDragonLair)
+    iDragonIndex = index
+    SetMenuOptionValueST(ProfileList[iDragonIndex])
+  ElseIf(option == oLocNordicRuin)
+    iNoridRuinIndex = index
+    SetMenuOptionValueST(ProfileList[iNoridRuinIndex])
+  ElseIf(option == oLocDwarvenRuin)
+    iDwarvenRuinIndex = index
+    SetMenuOptionValueST(ProfileList[iDwarvenRuinIndex])
+  ElseIf(option == oLocCaves)
+    iCavesIndex = index
+    SetMenuOptionValueST(ProfileList[iCavesIndex])
+  ElseIf(option == oLocFalmerHive)
+    iFalmerIndex = index
+    SetMenuOptionValueST(ProfileList[iFalmerIndex])
+  ElseIf(option == oLocFort)
+    iFortIndex = index
+    SetMenuOptionValueST(ProfileList[iFortIndex])
+  ElseIf(option == oLocBanditCamp)
+    iBanditIndex = index
+    SetMenuOptionValueST(ProfileList[iBanditIndex])
+  ElseIf(option == oLocGiantCamp)
+    iGiantIndex = index
+    SetMenuOptionValueST(ProfileList[iGiantIndex])
+  ElseIf(option == oLocHagNest)
+    iHagravenIndex = index
+    SetMenuOptionValueST(ProfileList[iHagravenIndex])
+  ElseIf(option == oLocHostileLoc)
+    iHostileLocIndex = index
+    SetMenuOptionValueST(ProfileList[iHostileLocIndex])
+  EndIf
 EndEvent
 ; ------------------------ Utility
 ; ----- Scan
@@ -2975,18 +3406,18 @@ int Function CheckFlag5p()
 EndFunction
 
 int Function getFlag(bool option, bool master = true)
-	If(option && master)
-		return OPTION_FLAG_NONE
-	else
-		return OPTION_FLAG_DISABLED
-	EndIf
+  If(option && master)
+    return OPTION_FLAG_NONE
+  else
+    return OPTION_FLAG_DISABLED
+  EndIf
 EndFunction
 
 int Function getFlagOR(bool optionA, bool optionB, bool optionC = false)
-	If(optionA || optionB || optionC)
-		return OPTION_FLAG_NONE
-	else
-		return OPTION_FLAG_DISABLED
-	EndIf
+  If(optionA || optionB || optionC)
+    return OPTION_FLAG_NONE
+  else
+    return OPTION_FLAG_DISABLED
+  EndIf
 EndFunction
 /;
