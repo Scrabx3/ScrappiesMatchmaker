@@ -25,9 +25,6 @@ int jProfile
 
 ; --------------- Code
 Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRef1, ObjectReference akRef2, int aiValue1, int aiValue2)
-  If(!IsRunning())
-    return
-  EndIf
   jProfile = aiValue1
   ; Create Scene
   Actor[] ColAct = GetActors()
@@ -39,8 +36,8 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     Debug.Trace("[SMM] <Scan> Actors collected: " + ColAct.Length)
   EndIf
   int i = 0
-  While(i < MCM.iMaxScenese)
-    Debug.Trace("[SMM] <Scan> Building Scene " + (i + 1) + "/" + MCM.iMaxScenese)
+  While(i < MCM.iMaxScenes)
+    Debug.Trace("[SMM] <Scan> Building Scene " + (i + 1) + "/" + MCM.iMaxScenes)
     ; Collect Initiator
     Actor init = GetInitiator(ColAct)
     If(!init)
@@ -50,11 +47,19 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     EndIf
     Debug.Trace("[SMM] <Scan> Found Initiator: " + init)
     colAct = PapyrusUtil.RemoveActor(colAct, PlayerRef)
-    int numActors = calcThreesome(colAct.Length + 1)
-    If(numActors < 2)
+    int numActors = calcThreesome(colAct.Length + 1) - 1
+    If(numActors < 1)
       Debug.Trace("[SMM] <Scan> Invalid Number of Actors")
-      If(Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbate)
-        ThreadKW.SendStoryEvent(akRef1 = init)
+      If(init != PlayerRef)
+        bool f = init.IsInFaction(PlayerFollowerFaction) || init.IsPlayerTeammate()
+        bool npc = init.HasKeyword(ActorTypeNPC)
+        bool fA = f && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateFol
+        bool npcA = !f && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateNPC
+        bool CrtA = !npc && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateCrt
+        If(npc && (fA || npcA) || crtA)
+          Debug.Trace("[SMM] <Scan> Attempt 1p Scene")
+          ThreadKW.SendStoryEvent(akRef1 = init)
+        EndIf
       EndIf
       Stop()
       return
@@ -63,7 +68,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     JArray.setForm(jScene, 0, init)
     ; Collect Partners
     int n = 0
-    int nn = 1
+    int nn = 0
     While(n < ColAct.Length && nn < numActors)
       If(ValidPartner(ColAct[n]) && isValidGenderCombination(init, ColAct[n]) && ValidMatch(init, ColAct[n]))
         JArray.setForm(jScene, nn, ColAct[n])
@@ -73,7 +78,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     EndWhile
     If(nn > 1)
       Debug.Trace("[SMM] <Scan> Attempting to start Scene with " + nn + " Participants")
-      If(!ThreadKW.SendStoryEventAndWait(aiValue1 = jScene))
+      If(!ThreadKW.SendStoryEventAndWait(akRef1 = init, aiValue1 = jScene, aiValue2 = jProfile))
         Debug.Trace("[SMM] <Scan> Failed to start Scene")
         JValue.release(jScene)
         Stop()
@@ -88,11 +93,14 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
 EndEvent
 
 bool Function ValidMatch(Actor init, Actor partner)
-  If(partner.GetDistance(init) > JMap.getFlt(jProfile, "fDistance"))
+  Debug.Trace("[SMM] Valid Match; Checking: Init: " + init.GetLeveledActorBase().GetName() + "; Partner: " + partner.GetLeveledActorBase().GetName())
+  If(partner.GetDistance(init) > JMap.getFlt(jProfile, "fDistance") * 70)
+    Debug.Trace("[SMM] Valid Match -> Distance Too Great")
     return false
   EndIf
   bool consent = JMap.getInt(jProfile, "bConsent")
   If(JMap.getInt(jProfile, "bLOS") && !(partner.HasLOS(init) || consent && init.HasLOS(partner)))
+    Debug.Trace("[SMM] Valid Match -> No LOS")
     return false
   EndIf
   bool unique = partner.GetLeveledActorBase().IsUnique() && init.GetLeveledActorBase().IsUnique()
@@ -106,20 +114,26 @@ bool Function ValidMatch(Actor init, Actor partner)
     dI = init.GetRelationshipRank(partner)
   EndIf
   If(unique && dC < JMap.getInt(jProfile, "iDisposition") && dI < JMap.getInt(jProfile, "iDisposition"))
+    Debug.Trace("[SMM] Valid Match -> Invalid Disposition")
     return false
   EndIf
   int incest = JMap.getInt(jProfile, "lIncest")
   If(incest == 0 && partner.HasFamilyRelationship(init) && !partner.HasAssociation(Spouse, init) || incest == 1 && partner.HasParentRelationship(init))
+    Debug.Trace("[SMM] Valid Match -> Invalid Incest")
     return false
   EndIf
-  return false
+  Debug.Trace("[SMM] Valid Match -> TRUE")
+  return true
 EndFunction
 
 ; ===============================================================
 ; =============================  INITIATOR
 ; ===============================================================
 Actor Function GetInitiator(Actor[] them)
-  int i = 0
+  If(Utility.RandomFloat(0, 99.9) < JMap.getFlt(jProfile, "fPlayerInit", 0) && ValidInitiator(PlayerRef))
+    return PlayerRef
+  EndIf
+  int i = 0 
   While(i < them.Length)
     If(ValidInitiator(them[i]))
       Actor ret = them[i]
@@ -132,15 +146,26 @@ Actor Function GetInitiator(Actor[] them)
 EndFunction
 
 bool Function ValidInitiator(Actor that)
+  Debug.Trace("[SMM] Checking Initiator: " + that + " -> " + that.GetLeveledActorBase().GetName())
   bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
-  int jTmp = JMap.getObj(jProfile, "bGenderPartner")
-  If(fol && !JArray.getInt(jTmp, 0) || !fol && !JArray.getInt(jTmp, GetActorType(that) + 1))
+  int jTmp = JMap.getObj(jProfile, "bGenderInit")
+  If(that != PlayerRef && (fol && !JArray.getInt(jTmp, 0) || !fol && !JArray.getInt(jTmp, GetActorType(that) + 1)))
+    Debug.Trace("[SMM] Invalid Initiator Gender")
     return false
   EndIf
   int arousal = GetArousal(that)
-  bool aroused = that == PlayerRef && arousal >= JMap.getInt(jprofile, "iArousalInitPl") || fol && arousal >= JMap.getInt(jprofile, "iArousalInitFol") || arousal >= JMap.getInt(jprofile, "iArousalInit")
+  bool aroused
+  If(that == PlayerRef)
+    aroused = arousal >= JMap.getInt(jprofile, "iArousalInitPl")
+  ElseIf(fol)
+    aroused = arousal >= JMap.getInt(jprofile, "iArousalInitFol")
+  Else
+    aroused = arousal >= JMap.getInt(jprofile, "iArousalInit")
+  EndIf
+  Debug.Trace("[SMM] Aroused Check: " + aroused)
   int alg = JMap.getInt(jProfile, "lAdvInit", 0)
   If(alg != 0)
+    Debug.Trace("[SMM] Advanced Algorithm: " + alg)
     int p = 0
     int[] v
     If(alg == 1)
@@ -148,7 +173,7 @@ bool Function ValidInitiator(Actor that)
     Else
       v = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
     EndIf
-    bool[] c = new bool[14]
+    bool[] c = new bool[13]
     c[0] = GameHour.Value >= MCM.fDuskTime || GameHour.Value < MCM.fDawnTime
     c[1] = IsThane(that)
     c[2] = aroused
@@ -164,6 +189,7 @@ bool Function ValidInitiator(Actor that)
     c[12] = c[10] && that.WornHasKeyword(Keyword.GetKeyword("zad_DeviousCollar")) || that.WornHasKeyword(Keyword.GetKeyword("ToysType_Neck")) || that.WornHasKeyword(Keyword.GetKeyword("zbfWornCollar"))
     int i = 0
     While(i < c.Length)
+      Debug.Trace("[SMM] Conditon " + i + ": " + c[i])
       If(c[i])
         If(alg == 2) ; Chance Adjust
           p += v[i]
@@ -178,11 +204,14 @@ bool Function ValidInitiator(Actor that)
       i += 1
     EndWhile
     If(alg == 1)
+      Debug.Trace("[SMM] End Status: " + p + " Required: " + JMap.getInt(jProfile, "iReqPoints"))
       return p >= JMap.getInt(jProfile, "iReqPoints")
     Else
+      Debug.Trace("[SMM] End Status: " + p + " Basechance: " + JMap.getInt(jProfile, "cBaseChance"))
       return Utility.RandomInt(0, 99) < p + JMap.getInt(jProfile, "cBaseChance")
     EndIf
   EndIf
+  Debug.Trace("[SMM] Skip Advanced")
   return aroused
 EndFunction
 
@@ -190,18 +219,22 @@ EndFunction
 ; =============================  PARTNER
 ; ===============================================================
 bool Function ValidPartner(Actor that)
+  Debug.Trace("[SMM] Checking Partner: " + that + " -> " + that.GetLeveledActorBase().GetName())
   bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
   int j = JMap.getObj(jProfile, "bGenderPartner")
   If(fol && !JArray.getInt(j, 0) || !fol && !JArray.getInt(j, GetActorType(that) + 1))
+    Debug.Trace("[SMM] Invalid Partner Gender")
     return false
   EndIf
   int arousal = GetArousal(that)
+  bool aroused
   If(fol)
-    return arousal >= JMap.getInt(jprofile, "iArousalPartnerFol")
+    aroused = arousal >= JMap.getInt(jprofile, "iArousalPartnerFol")
   Else
-    return arousal >= JMap.getInt(jprofile, "iArousalPartner")
+    aroused = arousal >= JMap.getInt(jprofile, "iArousalPartner")
   EndIf
-  return false
+  Debug.Trace("[SMM] Aroused Check: " + aroused)
+  return aroused
 EndFunction
 
 ; ===============================================================
@@ -290,26 +323,29 @@ bool Function isFollower(Actor that)
 EndFunction
 
 bool Function isValidGenderCombination(Actor init, Actor partner)
-  bool isFolI = init.IsInFaction(PlayerFollowerFaction) || init.IsPlayerTeammate()
+  bool sol = false
+  bool followerInit = init.IsInFaction(PlayerFollowerFaction) || init.IsPlayerTeammate()
   If(partner.IsInFaction(PlayerFollowerFaction) || partner.IsPlayerTeammate())
     int row = GetActorType(partner) * 7
     If(init == PlayerRef)
-      return MCM.bAssaultFol[row]
-    ElseIf(isFolI)
-      return MCM.bAssaultFol[row + 1]
+      sol = MCM.bAssaultFol[row]
+    ElseIf(followerInit)
+      sol = MCM.bAssaultFol[row + 1]
     Else
-      return MCM.bAssaultFol[row + GetActorType(init) + 2]
+      sol = MCM.bAssaultFol[row + GetActorType(init) + 2]
     EndIf
   Else
     int row = GetActorType(partner) * 7
     If(init == PlayerRef)
-      return MCM.bAssaultNPC[row]
-    ElseIf(isFolI)
-      return MCM.bAssaultNPC[row + 1]
+      sol = MCM.bAssaultNPC[row]
+    ElseIf(followerInit)
+      sol = MCM.bAssaultNPC[row + 1]
     Else
-      return MCM.bAssaultNPC[row + GetActorType(init) + 2]
+      sol = MCM.bAssaultNPC[row + GetActorType(init) + 2]
     EndIf
   EndIf
+  Debug.Trace("[SMM] Gender Combination -> " + sol + " => " + init.GetLeveledActorBase().GetName() + "<->" + partner.GetLeveledActorBase().GetName())
+  return sol
 EndFunction
 
 bool Function IsValidRace(Actor that)
@@ -375,12 +411,12 @@ bool Function IsValidRace(Actor that)
 EndFunction
 
 Actor[] Function GetActors()
-  int numAlias = GetNumAliases()
-  Actor[] ret = PapyrusUtil.ActorArray(numAlias, none)
+  Alias[] aliases = GetAliases()
+  Actor[] ret = PapyrusUtil.ActorArray(aliases.length, none)
   int jCooldowns = JValue.readFromFile(filePath + "Definition\\Cooldowns.json")
   int i = 0
-  While(i < numAlias)
-    Actor tmp = (GetAlias(i) as ReferenceAlias).GetReference() as Actor
+  While(i < aliases.length)
+    Actor tmp = (aliases[i] as ReferenceAlias).GetReference() as Actor
     bool accept = false
     If(!tmp)
       ;
@@ -424,381 +460,5 @@ State Abandon
     GoToState("")
   EndEvent
 EndState
-
-;/ -------------------------- Code
-int Function CheckForEngagement()
-  GoToState(StringUtil.Substring(PlayerScr.Profile, 1))
-  ;Gathering every non-empty Alias in this Array
-  Actor[] AliasArray = GetFilledActors()
-  If(!AliasArray.Length)
-    Debug.Trace("RMM: Found 0 Valid Actors, abandon")
-    return -1
-  EndIf
-  ;Collecting Valid Actors ("Valid" as in defined by MCM):
-  ToEngage = GetValidVictim(AliasArray)
-  If(ToEngage == none)
-    Debug.Trace("RMM: No Victim found, abandon.")
-    return -1
-  else
-    ToEngage.AddToFaction(FriendFaction)
-    If(toEngage.IsPlayerTeammate())
-      toEngage.AddToFaction(tmpTeam)
-      toEngage.SetPlayerTeammate(false, false)
-    EndIf
-    ToEngage.StopCombat()
-    ToEngage.StopCombatAlarm()
-    PotentialAggressors = GetAggressors(AliasArray)
-    int count = PotentialAggressors.Length
-    While(count)
-      count -= 1
-      PotentialAggressors[count].AddToFaction(FriendFaction)
-      If(toEngage.IsPlayerTeammate())
-        toEngage.AddToFaction(tmpTeam)
-        toEngage.SetPlayerTeammate(false, false)
-      EndIf
-      PotentialAggressors[count].StopCombat()
-      PotentialAggressors[count].StopCombatAlarm()
-    EndWhile
-    Debug.Trace("RMM: Trying to start Scene with Victim: " + ToEngage.GetLeveledActorBase().GetName() + " and " + ValidAggressor + " Aggressors.")
-    ; int Count = ValidAggressor
-    ; While(Count)
-    ;   Count -= 1
-    ;   CalmSpell.Cast(PotentialAggressors[Count])
-    ; EndWhile
-    If(ValidAggressor == 1) ;Only 1 Aggressor => 2some
-      return SLScene(2)
-    elseif(ValidAggressor == 2)
-      int Scenario = Utility.RandomInt(1, MCM.iTwoCh + MCM.iThreeCh)
-      If(Scenario <= MCM.iTwoCh)
-        return SLScene(2)
-      else
-        return SLScene(3)
-      EndIf
-    ElseIf(ValidAggressor == 3)
-      int Scenario = Utility.RandomInt(1,MCM.iTwoCh + MCM.iThreeCh + MCM.iFourCh)
-      If(Scenario <= MCM.iTwoCh)
-        return SLScene(2)
-      elseIf(Scenario <= MCM.iThreeCh)
-        return SLScene(3)
-      else
-        return SLScene(4)
-      EndIf
-    ElseIf(ValidAggressor == 4)
-      int Scenario = Utility.RandomInt(1, MCM.iTwoCh + MCM.iThreeCh + MCM.iFourCh + MCM.iFiveCh)
-      If(Scenario <= MCM.iTwoCh)
-        return SLScene(2)
-      elseIf(Scenario <= MCM.iThreeCh)
-        return SLScene(3)
-      elseif(Scenario <= MCM.iFourCh)
-        return SLScene(4)
-      else
-        return SLScene(5)
-      EndIf
-    else
-      Debug.Trace("RMM: Invalid aggressors passed, abandoned.")
-    EndIf
-  EndIf
-  return -1
-EndFunction
-
-int Function SLScene(int howMany)
-  ObjectReference myBed = none
-  bool UseBed = false
-  ; Get Bed if enabled
-  If(MCM.bUseBed && PlayerScr.SaveLoc)
-    myBed = SL.FindBed(ToEngage)
-    If(myBed)
-      UseBed = true
-    EndIf
-  EndIf
-  ; Get Num of Actors
-  Actor[] acteurs = PapyrusUtil.ActorArray(howMany)
-  sslBaseAnimation[] Anims
-  ;0 - Male, 1 - Female, 2+ - Creature
-  If(howMany == 2) ;2P
-    acteurs[0] = toEngage
-    acteurs[1] = potentialAggressors[0]
-    ; Get those Tags figures out
-    int vicGen = SL.GetGender(toEngage)
-    int aggrGen = SL.GetGender(potentialAggressors[0])
-    If(vicGen > 1 || aggrGen > 1) ; If either of them is a Creature, just play the Anim
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive")
-      else
-        Anims = SL.PickAnimationsByActors(acteurs)
-      EndIf
-    ElseIf(vicGen == 1 && aggrGen == 0) ; Female vic with Male aggr
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s2PFM)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s2PFM)
-      EndIf
-    ElseIf(vicGen == 0 && aggrGen == 1) ; Male vic with Female aggr
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s2PMF)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s2PMF)
-      EndIf
-    ElseIf(vicGen == 1 && aggrGen == 1) ; Female vic with Female aggr
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s2PFF)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s2PFF)
-      EndIf
-    Else ; Female vic with Male aggr
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s2PMM)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s2PMM)
-      EndIf
-    EndIf
-  ElseIf(howMany == 3) ; 3p
-    acteurs[0] = toEngage
-    acteurs[1] = potentialAggressors[0]
-    acteurs[2] = potentialAggressors[1]
-    ; Tags..
-    If(SL.GetGender(toEngage) == 0) ; Male vic
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s3PM)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s3PM)
-      EndIf
-    else ; Female Vic
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s3PF)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s3PF)
-      EndIf
-    EndIf
-  ElseIf(howMany == 4) ; 4p
-    acteurs[0] = toEngage
-    acteurs[1] = potentialAggressors[0]
-    acteurs[2] = potentialAggressors[1]
-    acteurs[3] = potentialAggressors[2]
-    ; Tags..
-    If(SL.GetGender(toEngage) == 0) ; Male vic
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s4PM)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s4PM)
-      EndIf
-    else ; Female Vic
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s4PF)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s4PF)
-      EndIf
-    EndIf
-  ElseIf(howMany == 5) ; 5p
-    acteurs[0] = toEngage
-    acteurs[1] = potentialAggressors[0]
-    acteurs[2] = potentialAggressors[1]
-    acteurs[3] = potentialAggressors[2]
-    acteurs[4] = potentialAggressors[3]
-    ; Tags..
-    If(SL.GetGender(toEngage) == 0) ; Male vic
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s5PM)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s5PM)
-      EndIf
-    else ; Female Vic
-      If(MCM.bUseAggressive)
-        Anims = SL.GetAnimationsByTags(howMany + 1, "Aggressive, " + MCM.s5PF)
-      else
-        Anims = SL.GetAnimationsByTags(howMany + 1, MCM.s5PF)
-      EndIf
-    EndIf
-  EndIf
-  ; Show Message if enabled
-  If(MCM.bNotify)
-    Debug.Notification(potentialAggressors[0].GetLeveledActorBase().GetName() + " engages " + toEngage.GetLeveledActorBase().GetName())
-  EndIf
-  ; Start Scene
-  If(MCM.bTreatAsVictim)
-    return SL.StartSex(Acteurs, Anims, Victim = ToEngage, CenterOn = myBed, AllowBed = UseBed, hook = "ScrappieMM")
-  else
-    return SL.StartSex(Acteurs, Anims, CenterOn = myBed, AllowBed = UseBed, hook = "ScrappieMM")
-  EndIf
-  return -1
-endFunction
-
-State Sheep
-  Actor Function GetValidVictim(Actor[] myActors)
-    ; Debug.Trace("RMM: Checking for Victim.. ")
-    If(Utility.RandomInt(1, 100) <= MCM.iPrefPlSheep && Player.GetReference() && IsValidVic(PlayerRef))
-        return PlayerRef
-    EndIf
-    Actor[] DummyArray = PapyrusUtil.ActorArray(myActors.Length)
-    int ValidVictim = 0
-    int Count = myActors.Length
-    While(Count > 0)
-      Count -= 1
-      If(IsValidVic(myActors[Count]))
-        DummyArray[ValidVictim] = myActors[Count]
-        ValidVictim += 1
-      EndIf
-      Utility.Wait(0.05)
-    EndWhile
-    If(MCM.bPrintTraces)
-      Debug.Trace("RMM: Found " + ValidVictim + " Victims")
-    EndIf
-    If(ValidVictim > 0)
-      int RandomActor = Utility.RandomInt(0, (ValidVictim - 1))
-      return DummyArray[RandomActor]
-    EndIf
-    return none
-  endFunction
-
-  bool Function IsValidVic(Actor target)
-    If(!target)
-      Debug.Trace("RMM: Invalid Actor pushed to IsValidVic, abandon")
-      return false
-    endIf
-    If(MCM.bPrintTraces)
-      Debug.Trace("RMM: Actor pushed to IsValidVic: " + target.GetLeveledActorBase().GetName())
-    EndIf
-    If(!SL.IsValidActor(target))
-      return false
-    else
-      vicRace = target.GetLeveledActorBase().GetRace()
-    EndIf
-    If(MCM.bUseArousalSheep && !MCM.bIgnoreVicArousalSheep)
-      If(Aroused.GetActorArousal(target) < MCM.iArousalThreshSheep)
-        return false
-      EndIf
-    endif
-    If(!MCM.bHostVicSheep)
-      If(target != PlayerRef && target.IsHostileToActor(PlayerRef))
-        return false
-      EndIf
-    EndIf
-    If(Target == PlayerRef) ; Player
-      If(MCM.bEngagePlSheep)
-        return true
-      else
-        return false
-      EndIf
-    elseIf(Target.IsInFaction(currentfollowerfaction)) ; Follower
-      If(!MCM.bEngageFolSheep)
-        return false
-      ElseIf(!MCM.bRestrictGenFolSheep)
-        return true
-      EndIf
-    elseIf(target.HasKeyword(ActorTypeNPC)) ; NPC
-      If(!MCM.bEngageNPCSheep)
-        return false
-      ElseIf(!MCM.bRestrictGenNPCSheep)
-        return true
-      EndIf
-    else ; Creature
-      If(!MCM.bEngageCreatureSheep)
-        return false
-      ElseIf(!MCM.bRestrictGenCrtSheep)
-        return true
-      EndIf
-    EndIf
-    ;0 - Male, 1 - Female, 2 - Futa, 3 - Creature Mal, 4 - Creature Fem
-    int gender = GetActorType(target)
-    If(gender == 0 && MCM.bEngageMaleSheep)
-      return true
-    ElseIf(gender == 1 && MCM.bEngageFemaleSheep)
-      return true
-    ElseIf(gender == 2 && MCM.bEngageFutaSheep)
-      return true
-    ElseIf(gender == 3 && MCM.bEngageCrMSheep)
-      return true
-    ElseIf(gender == 4 && MCM.bEngageCrFSheep)
-      return true
-    EndIf
-    return false
-  EndFunction
-
-  Actor[] Function GetAggressors(Actor[] myActors)
-    ; Debug.Trace("RMM: Checking for Aggressors...")
-    Actor[] DummyArray = PapyrusUtil.ActorArray(myActors.Length)
-    ValidAggressor = 0
-    int Count = myActors.Length
-    While(Count && ValidAggressor < (MCM.iMaxActor - 1))
-      Count -= 1
-      If(IsValidAg(myActors[Count]) == true)
-        DummyArray[ValidAggressor] = myActors[Count]
-        ValidAggressor += 1
-      EndIf
-      Utility.Wait(0.05)
-    EndWhile
-    If(MCM.bPrintTraces)
-      Debug.Trace("RMM: Found " + ValidAggressor + " Aggressors.")
-    endIf
-    return PapyrusUtil.RemoveActor(DummyArray, none)
-  endFunction
-
-  bool Function IsValidAg(Actor Target)
-    ; Base
-    If(target == none)
-      Debug.Trace("RMM: Invalid Actor pushed to IsValidAg, abandon")
-      return false
-    ElseIf(Target == ToEngage || Target == PlayerRef)
-      return false
-    EndIf
-    If(MCM.bPrintTraces)
-      Debug.Trace("RMM: Actor pushed to IsValidAg: " + Target.GetLeveledActorBase().GetName())
-    EndIf
-    ; Genderchecks
-    If(!checkFilter(GetActorType(target), target.IsInFaction(currentfollowerfaction)))
-      return false
-    EndIf
-    ; Racecheck
-    If(!target.HasKeyword(ActorTypeNPC))
-      If(ValidAggressor == 0)
-        aggrRace = target.GetLeveledActorBase().GetRace()
-        If(!SL.AllowedCreature(aggrRace))
-          return false
-        endIf
-      else
-        If(!aggrRace)
-          return false
-        ElseIf(SL.AllowedCreatureCombination(aggrRace,  target.GetLeveledActorBase().GetRace()))
-          return false
-        EndIf
-      EndIf
-    EndIf
-    ; Hostility & Combat Check
-    If(target.IsInCombat())
-      return false
-    ElseIf(target.IsHostileToActor(ToEngage))
-      If(!MCM.bHostOnFriendSheep)
-        return false
-      EndIf
-    EndIf
-    ; Engage Settings
-    If(MCM.bUseArousalSheep)
-      If(Aroused.GetActorArousal(target) < MCM.iArousalThreshSheep)
-        return false
-      EndIf
-    EndIf
-    If(MCM.bUseDistSheep)
-      If(ToEngage.GetDistance(Target) > MCM.fMaxDistanceSheep*70)
-        return false
-      EndIf
-    EndIf
-    If(MCM.bUseLoSSheep)
-      If(!Target.HasLOS(ToEngage))
-        return false
-      EndIf
-    EndIf
-    If(MCM.bUseDispotionSheep)
-      If(ToEngage == PlayerRef && Target.GetRelationshipRank(PlayerRef) < MCM.iMinDispPlSheep)
-        return false
-      ElseIf(ToEngage.IsInFaction(currentfollowerfaction) && Target.GetRelationshipRank(PlayerRef) < MCM.iMinDispFolSheep)
-        return false
-      ElseIf(Target.GetRelationshipRank(ToEngage) < MCM.iMinDispNPCSheep)
-        return false
-      EndIf
-    EndIf
-    return true
-  EndFunction
-endState
-/; 
 
 ; 70unit = 1m

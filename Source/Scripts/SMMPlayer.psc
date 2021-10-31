@@ -40,7 +40,7 @@ Keyword Property LocTypeWarlockLair Auto
 Keyword Property LocTypeWerebearLair Auto
 Keyword Property LocTypeWerewolfLair Auto
 ; --------------- Variables
-String locProfile = ""
+String locProfile = "$SMM_Disabled"
 
 ; =============================================================
 ; ===================================== START UP
@@ -53,6 +53,24 @@ Event OnPlayerLoadGame()
   Utility.Wait(3)
   ContinueScan()
   RegisterForKey(MCM.iPauseKey)
+  ; Check Mods
+ 	If(Game.GetModByName("SexLab.esm") == 255)
+    MCM.bSLAllowed = false
+    MCM.bBestiality = false
+    MCM.bSupportFilter = false
+  EndIf
+	If(Game.GetModByName("OStim.esp") != 255)
+    MCM.bOStimAllowed = false
+  ElseIf(SMMOstim.GetVersion() < 26)
+    MCM.bOStimAllowed = false
+    Debug.MessageBox("ScRappies Matchmaker requires OStim API Version 26 or higher. Your Version is: " + SMMOstim.GetVersion())
+  EndIf
+  If(!MCM.bSLAllowed && !MCM.bOStimAllowed)
+    Debug.MessageBox("ScRappies Matchmaker requires either SexLab Framework or OStim to be installed.")
+  EndIf
+  ; Reset Cooldowns
+  JValue.writeToFile(JValue.readFromFile("Data\\SKSE\\SMM\\Definition\\Blank.json"), "Data\\SKSE\\SMM\\Definition\\Cooldowns.json")
+  ; Friend Faction
   int i = 0
   While(i < FriendList.GetSize())
     Faction tmpFac = FriendList.GetAt(i) as Faction
@@ -76,19 +94,20 @@ EndFunction
 ; =============================================================
 
 Event OnUpdate()
-  If(locProfile == "")
-    Debug.Trace("[Scrappies] <Player> <Update> Invalid Profile")
+  Debug.Notification("<SMM> Scanning with Profile: { " + locProfile + " }")
+  If(locProfile == "$SMM_Disabled")
+    Debug.Trace("[SMM] <Player> <Update> Invalid Profile")
     return
   Else
-    int jProfile = JValue.readFromFile("Data\\SKSE\\SMM\\" + locProfile)
-    If(JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat() || Utility.RandomInt(0, 99) < JMap.getInt(jProfile, "fEngageChance"))
+    int jProfile = JValue.readFromFile("Data\\SKSE\\SMM\\" + locProfile + ".json")
+    If(JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat() || Utility.RandomFloat(0, 99.9) < JMap.getInt(jProfile, "fEngageChance"))
       return
     ElseIf(JMap.getFlt(jProfile, "fEngageTimeMin") >= GameHour.Value && JMap.getFlt(jProfile, "fEngageTimeMax") < GameHour.Value)
-      
+      return
     EndIf
     If(ScanThread.SendStoryEventAndWait(aiValue1 = jProfile))
       UnregisterForUpdate()
-      Debug.Trace("[Scrappies] <Player> Checking Engagement")
+      Debug.Trace("[SMM] <Player> Checking Engagement")
       return
     EndIf
   EndIf
@@ -96,7 +115,7 @@ EndEvent
 
 Function ContinueScan()
   If(DoScan())
-    RegisterForUpdate(MCM.iTickIntervall)
+    RegisterForUpdate(MCM.iTickInterval)
   Else
     UnregisterForUpdate()
   EndIf
@@ -112,40 +131,13 @@ EndFunction
 
 ; Update the Profile for this Location. Index for Location in Translation Files
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)
+  If(akOldLoc == akNewLoc)
+    return
+  EndIf
   int p
   If(!akNewLoc) ; Wilderness
     p = 0
-  ElseIf(akNewLoc.HasKeyword(LocTypeDwelling)) ; Friendly Loc
-    If(akNewLoc.HasKeyword(LocTypeJail))
-      locprofile =  ""
-    ElseIf(akNewLoc.HasKeyword(LocTypeInn))
-      p = 14
-    ElseIf(akNewLoc.HasKeyword(LocTypePlayerHouse))
-      p = 16
-    ElseIf(akNewLoc.HasKeyword(LocTypeGuild))
-      p = 20
-    ElseIf(akNewLoc.HasKeyword(LocTypeCemetery))
-      p = 22
-    ElseIf(akNewLoc.HasKeyword(LocTypeMine))
-      p = 24
-    ElseIf(akNewLoc.HasKeyword(LocTypeTemple))
-      p = 18
-    ElseIf(akNewLoc.HasKeyword(LocTypeCastle))
-      p = 10
-    ElseIf(akNewLoc.HasKeyword(LocTypeOrcStronghold))
-      p = 8
-    ElseIf(akNewLoc.HasKeyword(LocTypeCity))
-      p = 2
-    ElseIf(akNewLoc.HasKeyword(LocTypeTown))
-      p = 4
-    ElseIf(akNewLoc.HasKeyword(LocTypeSettlement))
-      p = 6
-    ElseIf(akNewLoc.HasKeyword(LocTypeHouse) || PlayerRef.GetParentCell().IsInterior()) 
-      p = 12
-    Else
-      p = 26
-    EndIf
-  Else ; Considering everything here Hostile
+  ElseIf(akNewLoc.HasKeyword(LocTypeDungeon)) ; Friendly Loc
     If(akNewLoc.HasKeyword(LocTypeWerebearLair))
       p = 25
     ElseIf(akNewLoc.HasKeyword(LocTypeWerewolfLair))
@@ -175,34 +167,40 @@ Event OnLocationChange(Location akOldLoc, Location akNewLoc)
     Else
       p = 27
     EndIf
-  EndIf
-  Debug.Trace("[Scrappies] Changed Location <Index " + p + " >")
-  locProfile = MCM.lProfiles[p]
-EndEvent
-
-;/ -------------------------- SMM V2
-Event OnUpdate()
-  If(DoScan())
-    If(ScanQ.Start())
-      If(MCM.bPrintTraces)
-        Debug.Notification("Checking Engagement..")
-      EndIf
-      If(Scan.CheckForEngagement() > -1)
-        If(MCM.iScanCooldown > 0)
-          RegisterForSingleUpdateGameTime(MCM.iScanCooldown)
-        else
-          RegisterForSingleUpdate(MCM.iTickIntervall)
-        EndIf
-      else
-        RegisterForSingleUpdate(MCM.iTickIntervall*2)
-      EndIf
-      Utility.Wait(0.5)
-      ScanQ.Stop()
-    else
-      RegisterForSingleUpdate(MCM.iTickIntervall)
+  Else ; Considering everything here Friendly
+    If(akNewLoc.HasKeyword(LocTypeJail))
+      locprofile =  "$SMM_Disabled"
+    ElseIf(akNewLoc.HasKeyword(LocTypeInn))
+      p = 14
+    ElseIf(akNewLoc.HasKeyword(LocTypePlayerHouse))
+      p = 16
+    ElseIf(akNewLoc.HasKeyword(LocTypeGuild))
+      p = 20
+    ElseIf(akNewLoc.HasKeyword(LocTypeCemetery))
+      p = 22
+    ElseIf(akNewLoc.HasKeyword(LocTypeMine))
+      p = 24
+    ElseIf(akNewLoc.HasKeyword(LocTypeTemple))
+      p = 18
+    ElseIf(akNewLoc.HasKeyword(LocTypeCastle))
+      p = 10
+    ElseIf(akNewLoc.HasKeyword(LocTypeOrcStronghold))
+      p = 8
+    ElseIf(akNewLoc.HasKeyword(LocTypeCity))
+      p = 2
+    ElseIf(akNewLoc.HasKeyword(LocTypeTown))
+      p = 4
+    ElseIf(akNewLoc.HasKeyword(LocTypeSettlement))
+      p = 6
+    ElseIf(akNewLoc.HasKeyword(LocTypeHouse) || PlayerRef.GetParentCell().IsInterior()) 
+      p = 12
+    Else
+      p = 26
     EndIf
-  else
-    RegisterForSingleUpdate(MCM.iTickIntervall*1.5)
   EndIf
-endEvent
-/;
+  Debug.Trace("[SMM] Changed Location <Index " + p + " >")
+  locProfile = MCM.lProfiles[p]
+  If(MCM.bLocationScan && DoScan())
+    OnUpdate()
+  EndIf
+EndEvent

@@ -44,6 +44,7 @@
         	<Include>*.esp</Include>
             <Include>Interface</Include>
             <Include>Scripts</Include>
+            <Include>SKSE</Include>
             <Include>Source</Include>
             <Include>LICENSE</Include>
         </ZipFile>
