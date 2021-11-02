@@ -59,7 +59,7 @@ Event OnPlayerLoadGame()
     MCM.bBestiality = false
     MCM.bSupportFilter = false
   EndIf
-	If(Game.GetModByName("OStim.esp") != 255)
+	If(Game.GetModByName("OStim.esp") == 255)
     MCM.bOStimAllowed = false
   ElseIf(SMMOstim.GetVersion() < 26)
     MCM.bOStimAllowed = false
@@ -100,9 +100,14 @@ Event OnUpdate()
     return
   Else
     int jProfile = JValue.readFromFile("Data\\SKSE\\SMM\\" + locProfile + ".json")
-    If(JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat() || Utility.RandomFloat(0, 99.9) < JMap.getInt(jProfile, "fEngageChance"))
+    If(Utility.RandomFloat(0, 99.9) >= JMap.getInt(jProfile, "fEngageChance"))
+      Debug.Trace("[SMM] <Player> Poor RNG, skipping")
       return
-    ElseIf(JMap.getFlt(jProfile, "fEngageTimeMin") >= GameHour.Value && JMap.getFlt(jProfile, "fEngageTimeMax") < GameHour.Value)
+    ElseIf(JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat())
+      Debug.Trace("[SMM] <Player> Player in Combat, skipping")
+      return
+    ElseIf(JMap.getFlt(jProfile, "fEngageTimeMin") > GameHour.Value || JMap.getFlt(jProfile, "fEngageTimeMax") < GameHour.Value)
+      Debug.Trace("[SMM] <Player> Invalid Time, skipping")
       return
     EndIf
     If(ScanThread.SendStoryEventAndWait(aiValue1 = jProfile))

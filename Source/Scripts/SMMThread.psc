@@ -4,46 +4,64 @@ Scriptname SMMThread extends Quest Conditional
 SMMMCM Property MCM Auto
 SMMScan Property Scan Auto
 Scene Property MyScene Auto
-; NOTE: Alias with ID 0 is considered the Initiator; Alias with ID 1+ are
-;/ TODO: Split 2p+ Scenes:
-The StoryScript Event should only prepare everything & start the Scene; in 2p+ Scenes, Actors will close in one everyone first before starting the Scene
-/;
-Actor init
+; NOTE: Alias with ID 0 is considered the Initiator; Alias with ID 1+ are Partners
+int jActors
 int jProfile
+Actor init
+Actor[] partners
 
 Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRef1, ObjectReference akRef2, int aiValue1, int aiValue2)
+  init = akRef1 as Actor
+  jActors = aiValue1
+  jProfile = aiValue2
+  Debug.Notification("Thread Started with Initiator: " + init.GetLeveledActorBase().GetName())
+  Debug.Trace("Thread Started with Initiator: " + init + "/" + init.GetLeveledActorBase().GetName())
+  ; Fill Aliases
+  Form[] jActorForms = JArray.asFormArray(jActors)
+  partners = PapyrusUtil.ActorArray(jActorForms.length)
+  int i = 0
+  While(i < partners.length)
+    partners[i] = jActorForms[i] as Actor
+    (GetNthAlias(i + 1) as ReferenceAlias).ForceRefTo(partners[i])
+    partners[i].StopCombat()
+    partners[i].StopCombatAlarm()
+    i += 1
+  EndWhile
+  ; Start Scene
+  MyScene.Start()
+  If(!MyScene.IsPlaying())
+    Debug.Trace("[SMM] <Thread> Scene Failed to Start")
+    Stop()
+  EndIf
+EndEvent
+
+Function StartScene()
   String h = GetFormID()
   int s
-  If(aiValue1 == 0) ; Empty Array, 1p Scene
-    s = SMMAnimFrame.StartAnimationSingle(MCM, akRef1 as Actor, h)
+  If(jActors == 0) ; Empty Array, 1p Scene
+    s = SMMAnimFrame.StartAnimationSingle(MCM, init, h)
   Else ; 2p+ Scene
-    Form[] p = JArray.asFormArray(aiValue1)
-    Actor[] them = PapyrusUtil.ActorArray(p.length)
-    int cd = JValue.readFromFile("Data\\SKSE\\SMM\\Cooldowns.json")
-    int i = 0
-    While(i < them.length)
-      them[i] = p[i] as Actor
-      (GetNthAlias(i + 1) as ReferenceAlias).ForceRefTo(them[i])
-      them[i].StopCombat()
-      them[i].StopCombatAlarm()
-      JMap.setFlt(cd, them[i].GetFormID(), Scan.GameHour.Value)
-      i += 1
-    EndWhile
-    JMap.setFlt(cd, akRef1.GetFormID(), Scan.GameHour.Value)
-    JValue.writeToFile(cd, "Data\\SKSE\\SMM\\Cooldowns.json")
-    s = SMMAnimFrame.StartAnimation(MCM, akRef1 as Actor, them, JMap.getInt(aiValue2, "bConsent"), h)
+    s = SMMAnimFrame.StartAnimation(MCM, init, partners, JMap.getInt(jProfile, "bConsent"), h)
   EndIf
   If(s == -1)
-    RegisterForSingleUpdate(0.05)
+    Debug.MessageBox("Failed to start Animation on Thread with Initiator: " + init.GetLeveledActorBase().GetName())
+    Debug.Trace("Failed to start Animation on Thread with Initiator: " + init + "/" + init.GetLeveledActorBase().GetName())
+    Stop()
+    return
   ElseIf(s == 0)
     RegisterForModEvent("HookAnimationEnd_" + h, "AfterSceneSL")
   ElseIf(s == 1)
     RegisterForModEvent("ostim_end", "AfterSceneOStim")
   EndIf
-  init = akRef1 as Actor
-  jProfile = aiValue2
-  SetStage(20)
-EndEvent
+  int jCd = JValue.readFromFile("Data\\SKSE\\SMM\\Definition\\Cooldowns.json")
+  JMap.setFlt(jCd, init.GetFormID(), Scan.GameHour.Value)
+  int i = 0
+  While(i < partners.Length)
+    JMap.setFlt(jCd, partners[i].GetFormID(), Scan.GameHour.Value)
+    i += 1
+  EndWhile
+  JValue.writeToFile(jCd, "Data\\SKSE\\SMM\\Cooldowns.json")
+EndFunction
 
 Event AfterSceneSL(int tid, bool hasPlayer)
   PostScene(-2)
@@ -58,10 +76,13 @@ Function PostScene(int ID)
     EndIf
   EndIf
   ; Assuming the Adult Scene ended here
-  Stop()
+  SetStage(5)
 EndFunction
 
-Event OnUpdate()
-  JValue.release(jProfile)
-  Stop()
-EndEvent
+Function Stop()
+  Debug.Notification("Thread Stopped with Initiator: " + init.GetLeveledActorBase().GetName())
+  Debug.Trace("Thread Stopped with Initiator: " + init + "/" + init.GetLeveledActorBase().GetName())
+  jActors = JValue.release(jActors)
+  jProfile = JValue.release(jProfile)
+  Parent.Stop()
+EndFunction

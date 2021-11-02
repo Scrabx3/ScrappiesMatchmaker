@@ -65,7 +65,6 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
       return
     EndIf
     int jScene = JValue.retain(JArray.objectWithSize(numActors), "SMMThread")
-    JArray.setForm(jScene, 0, init)
     ; Collect Partners
     int n = 0
     int nn = 0

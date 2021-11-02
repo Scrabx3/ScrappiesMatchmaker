@@ -175,12 +175,13 @@ Function Initialize()
   EndWhile
 
   SLTags = new String[11]
+  bValidRace = new bool[52]
 EndFunction
 
 ; ===============================================================
 ; =============================  MENU
 ; ===============================================================
-int jProfile
+int jProfile = 0
 
 Event OnPageReset(string Page)
   SetCursorFillMode(TOP_TO_BOTTOM)
@@ -276,8 +277,7 @@ Event OnPageReset(string Page)
       While(i < c.Length)
         AddMenuOptionST("reqPoints_" + i, "$SMM_AdvCon_" + i, lReqList[c[i]])
         If(i == 6)
-          SetCursorPosition(35)
-          AddEmptyOption()
+          SetCursorPosition(37)
           AddTextOptionST("AdvCondition", "$SMM_Help", none)
         EndIf
         i += 1
@@ -424,7 +424,7 @@ EndEvent
 ; ===============================================================
 Event OnSelectST()
   String[] option = PapyrusUtil.StringSplit(GetState(), "_")
-  If(option[0] == "LocScan")
+  If(option[0] == "LocScan") ; General
     bLocationScan = !bLocationScan
     SetToggleOptionValueST(bLocationScan)
 
@@ -867,6 +867,26 @@ Event OnMenuAcceptST(Int aiIndex)
 EndEvent
 
 ; ===============================================================
+; =============================  INPUTS
+; ===============================================================
+Event OnInputOpenST()
+	string[] option = PapyrusUtil.StringSplit(GetState(), "_")
+	If(option[0] == "SLTag")
+		int i = option[1] as int
+		SetInputDialogStartText(SLTags[i])
+	EndIf
+EndEvent
+
+Event OnInputAcceptST(string a_input)
+	string[] option = PapyrusUtil.StringSplit(GetState(), "_")
+	If(option[0] == "SLTag")
+		int i = option[1] as int
+		SLTags[i] = a_input
+		SetInputOptionValueST(SLTags[i])
+	EndIf
+EndEvent
+
+; ===============================================================
 ; =============================  HIGHLIGHTS
 ; ===============================================================
 Event OnHighlightST()
@@ -1011,7 +1031,7 @@ Function SaveJson()
 EndFunction
 
 Function CreateMenuProfiles(int append0 = 0)
-  int jFiles = JValue.readFromDirectory(filePath)
+  int jFiles = JValue.readFromDirectory(filePath, ".json")
   String[] files = JMap.allKeysPArray(jFiles)
   JValue.zeroLifetime(jFiles)
   smmProfiles = Utility.CreateStringArray(files.length + append0)
