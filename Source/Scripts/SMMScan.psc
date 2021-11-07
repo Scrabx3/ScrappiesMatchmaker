@@ -70,13 +70,15 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     int nn = 0
     While(n < ColAct.Length && nn < numActors)
       If(ValidPartner(ColAct[n]) && isValidGenderCombination(init, ColAct[n]) && ValidMatch(init, ColAct[n]))
+        Debug.Trace("[SMM] <Scan> Adding Partner: " + ColAct[n] + " -> " + ColAct[n].GetLeveledActorBase().GetName())
         JArray.setForm(jScene, nn, ColAct[n])
         nn += 1
       EndIf
       n += 1
     EndWhile
-    If(nn > 1)
+    If(nn > 0)
       Debug.Trace("[SMM] <Scan> Attempting to start Scene with " + nn + " Participants")
+      JArray.eraseForm(jScene, none)
       If(!ThreadKW.SendStoryEventAndWait(akRef1 = init, aiValue1 = jScene, aiValue2 = jProfile))
         Debug.Trace("[SMM] <Scan> Failed to start Scene")
         JValue.release(jScene)
@@ -184,7 +186,7 @@ bool Function ValidInitiator(Actor that)
     c[8] = that.GetActorValuePercentage("Health") < JMap.getFlt(jProfile, "rHealthThresh")
     c[9] = that.GetActorValuePercentage("Stamina") < JMap.getFlt(jProfile, "rStaminaThresh") || that.GetActorValuePercentage("Magicka") < JMap.getFlt(jProfile, "rMagickaThresh")
     c[10] = that.WornHasKeyword(Keyword.GetKeyword("zad_lockable")) || that.WornHasKeyword(Keyword.GetKeyword("ToysToy")) || that.WornHasKeyword(Keyword.GetKeyword("zbfWornDevice"))
-    c[11] = c[10] && that.WornHasKeyword(Keyword.GetKeyword("zad_DeviousHeavyBondage")) || (Quest.GetQuest("toysframework") as ToysFramework).RestrainedActive || that.WornHasKeyword(Keyword.GetKeyword("zbfEffectWrist"))
+    c[11] = c[10] && that.WornHasKeyword(Keyword.GetKeyword("zad_DeviousHeavyBondage")) || that.WornHasKeyword(Keyword.GetKeyword("zbfEffectWrist")) || that.WornHasKeyword(Keyword.GetKeyword("ToysEffect_ArmBind")) || that.WornHasKeyword(Keyword.GetKeyword("ToysEffect_YokeBind"))
     c[12] = c[10] && that.WornHasKeyword(Keyword.GetKeyword("zad_DeviousCollar")) || that.WornHasKeyword(Keyword.GetKeyword("ToysType_Neck")) || that.WornHasKeyword(Keyword.GetKeyword("zbfWornCollar"))
     int i = 0
     While(i < c.Length)
@@ -265,9 +267,6 @@ bool Function IsThane(Actor that)
   return false
 EndFunction
 
-bool Function IsBound(Actor that)
-  return false
-EndFunction
 ; ===============================================================
 ; =============================  UTILITY
 ; ===============================================================
@@ -419,7 +418,7 @@ Actor[] Function GetActors()
     bool accept = false
     If(!tmp)
       ;
-    ElseIf(JMap.getFlt(jCooldowns, tmp.GetFormID()) > GameDaysPassed.Value)
+    ElseIf(JMap.getFlt(jCooldowns, tmp.GetFormID()) > GameDaysPassed.Value + (JMap.getFlt(jProfile, "fEngageCooldown", 1) * 1/24))
       ;
     ElseIf(tmp == PlayerRef)
       accept = JMap.getInt(jProfile, "bConsiderPlayer")
@@ -454,7 +453,7 @@ Function Stop()
 EndFunction
 State Abandon
   Event OnUpdate()
-    PlayerScr.ContinueScan()
+    PlayerScr.RegisterForSingleUpdate(MCM.iTickInterval)
     Parent.Stop()
     GoToState("")
   EndEvent

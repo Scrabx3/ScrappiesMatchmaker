@@ -1,7 +1,7 @@
 Scriptname SMMAnimFrame Hidden
 
 
-bool Function hasCreatures(Actor that, Actor[] them)
+bool Function hasCreatures(Actor that, Actor[] them) global
   Keyword atNPC = Keyword.GetKeyword("ActorTypeNPC")
   If(!that.HasKeyword(atNPC))
     int i = 0
@@ -29,7 +29,7 @@ int Function StartAnimationSingle(SMMMCM MCM, Actor that, String hook = "") glob
       sol = 0
 		EndIf
   ElseIf(MCM.bSLAllowed)
-    If(MCM.bOStimAllowed && Utility.RandomInt(0, 1) == 0)
+    If(MCM.bOStimAllowed && (MCM.bCrtOnly || Utility.RandomInt(0, 1) == 0))
       SMMOstim.StartSceneSingle(that)
       sol = 1
     Else
@@ -45,12 +45,12 @@ EndFunction
 
 int Function StartAnimation(SMMMCM MCM, Actor victim, Actor[] them, int asVictim = 1, String hook = "") global
   int sol = -1
-  If(!victim.HasKeyword(Keyword.GetKeyword("ActorTypeNPC")))
+  If(hasCreatures(victim, them))
     If(MCM.bSLAllowed)
 			sol = SMMSexLab.StartAnimation(MCM, victim, them, asVictim, hook)
 		EndIf
   ElseIf(MCM.bSLAllowed)
-    If(MCM.bOStimAllowed && Utility.RandomInt(0, 1) == 0)
+    If(MCM.bOStimAllowed && (MCM.bCrtOnly || Utility.RandomInt(0, 1) == 0))
       sol = SMMOstim.StartScene(MCM, victim, them, asVictim)
     Else
       sol = SMMSexLab.StartAnimation(MCM, victim, them, asVictim, hook)
@@ -62,9 +62,9 @@ int Function StartAnimation(SMMMCM MCM, Actor victim, Actor[] them, int asVictim
     String vicName = victim.GetLeveledActorBase().GetName()
     String otherName = them[0].GetLeveledActorBase().GetName()
     If(MCM.bNotifyColorAF)
-      Debug.Notification("<font color='" + MCM.sNotifyColorAF + "'>" + vicName + " is being assaulted by " + otherName + "</font>")
+      Debug.Notification("<font color='" + MCM.sNotifyColorAF + "'>" + vicName + " is being engaged by " + otherName + "</font>")
     else
-      Debug.Notification(vicName + " is being assaulted by " + otherName + "</font>")
+      Debug.Notification(vicName + " is being engaged by " + otherName + "</font>")
     EndIf
   EndIf
   return sol

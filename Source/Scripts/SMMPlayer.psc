@@ -50,8 +50,9 @@ Event OnInit()
 EndEvent
 
 Event OnPlayerLoadGame()
-  Utility.Wait(3)
-  ContinueScan()
+  If(!MCM.bPaused)
+    RegisterForSingleUpdate(MCM.iTickInterval)
+  EndIf
   RegisterForKey(MCM.iPauseKey)
   ; Check Mods
  	If(Game.GetModByName("SexLab.esm") == 255)
@@ -81,7 +82,12 @@ EndEvent
 
 Event OnKeyDown(int keyCode)
   MCM.bPaused = !MCM.bPaused
-  ContinueScan()
+  RegisterForSingleUpdate(MCM.iTickInterval)
+  If(MCM.bPaused)
+    Debug.Notification("ScRappies Matchmaker paused")
+  Else
+    Debug.Notification("ScRappies Matchmaker enabled")
+  EndIf
 EndEvent
 
 Function ResetKey(int newKeyCode)
@@ -94,21 +100,19 @@ EndFunction
 ; =============================================================
 
 Event OnUpdate()
-  Debug.Notification("<SMM> Scanning with Profile: { " + locProfile + " }")
+  ; Debug.Notification("<SMM> Scanning with Profile: { " + locProfile + " }")
   If(locProfile == "$SMM_Disabled")
     Debug.Trace("[SMM] <Player> <Update> Invalid Profile")
-    return
+  ElseIf(DoScan() == false)
+    Debug.Trace("[SMM] <Player> <Update> DoScan returned false")
   Else
     int jProfile = JValue.readFromFile("Data\\SKSE\\SMM\\" + locProfile + ".json")
     If(Utility.RandomFloat(0, 99.9) >= JMap.getInt(jProfile, "fEngageChance"))
       Debug.Trace("[SMM] <Player> Poor RNG, skipping")
-      return
     ElseIf(JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat())
       Debug.Trace("[SMM] <Player> Player in Combat, skipping")
-      return
     ElseIf(JMap.getFlt(jProfile, "fEngageTimeMin") > GameHour.Value || JMap.getFlt(jProfile, "fEngageTimeMax") < GameHour.Value)
       Debug.Trace("[SMM] <Player> Invalid Time, skipping")
-      return
     EndIf
     If(ScanThread.SendStoryEventAndWait(aiValue1 = jProfile))
       UnregisterForUpdate()
@@ -116,15 +120,8 @@ Event OnUpdate()
       return
     EndIf
   EndIf
+  RegisterForSingleUpdate(MCM.iTickInterval)
 EndEvent
-
-Function ContinueScan()
-  If(DoScan())
-    RegisterForUpdate(MCM.iTickInterval)
-  Else
-    UnregisterForUpdate()
-  EndIf
-EndFunction
 
 bool Function DoScan()
   return !(MCM.bPaused || UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())

@@ -73,7 +73,7 @@ int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] others, int asVicti
 	  else ; Array Entry (4/5) for 3, (6/7) for 4 or (8/9) for 5
 	    anims = SL.GetAnimationsByTags(others.length, MCM.SLTags[(others.length * 2) - (1 + fg)])
 	  EndIf
-		If(anims)
+		If(anims.Length)
 			breakLoop = true
 		ElseIf(others.length < 2)
 			return -1

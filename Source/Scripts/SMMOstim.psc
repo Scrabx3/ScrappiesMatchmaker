@@ -15,9 +15,7 @@ bool Function FindInit(Actor that, int ID) global
     return OStim.IsActorInvolved(that)
   Else
     OStimSubthread st = OStim.GetSubthread(ID)
-    If(st)
-      return st.actorlist.Find(that) > -1
-    EndIf
+    return st.actorlist.Find(that) > -1
   EndIf
   return false
 EndFunction
