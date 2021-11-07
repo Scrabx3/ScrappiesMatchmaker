@@ -216,11 +216,14 @@ Event OnPageReset(string Page)
     AddHeaderOption("$SMM_Definitions")
     AddSliderOptionST("DefDuskTime", "$SMM_DuskTime", fDuskTime, "{1}0")
     AddSliderOptionST("DefDawnTime", "$SMM_DawnTime", fDawnTime, "{1}0")
+    SetCursorPosition(21) ; 23 is bottom right without scrolling
+    AddHeaderOption("$SMM_Debug")
+    AddTextOptionST("shutdownThreads", "$SMM_ShutDown", "")
 
   ElseIf(Page == "$SMM_Locs")
     CreateMenuProfiles(1)
     SetCursorFillMode(LEFT_TO_RIGHT)
-    AddEmptyOption()
+    AddMenuOptionST("ApplyLocProfile", "$SMM_ApplyLocProfile", "")
     AddTextOptionST("locProfileHelp", "$SMM_Help", none)
     AddHeaderOption("")
     AddHeaderOption("")
@@ -462,6 +465,15 @@ Event OnSelectST()
   If(option[0] == "LocScan") ; General
     bLocationScan = !bLocationScan
     SetToggleOptionValueST(bLocationScan)
+
+  ElseIf(option[0] == "shutdownThreads") ; General/Debug
+    Quest.GetQuest("SMM_ThreadPlayer").Stop()
+    int i = 0
+    While(i < 10)
+      Quest.GetQuest("SMM_Thread0" + i).Stop()
+      i += 1
+    EndWhile
+    ShowMessage("$SMM_shutdownThreadsDone", false, "$SMM_Ok")
 
   ElseIf(option[0] == "considerFollower")  ; Profiles
     int val = JMap.getInt(jProfile, "bConsiderFollowers")
@@ -929,6 +941,10 @@ Event OnMenuOpenST()
     SetMenuDialogStartIndex(c)
     SetMenuDialogDefaultIndex(0)
     SetMenuDialogOptions(smmProfiles)
+  ElseIf(option[0] == "ApplyLocProfile")
+    SetMenuDialogStartIndex(0)
+    SetMenuDialogDefaultIndex(0)
+    SetMenuDialogOptions(smmProfiles)
 
   ElseIf(option[0] == "crtFilterMethod") ; Creature Filter
 		SetMenuDialogStartIndex(iCrtFilterMethod)
@@ -962,6 +978,13 @@ Event OnMenuAcceptST(Int aiIndex)
     int i = option[1] as int
     lProfiles[i] = smmProfiles[aiIndex]
     SetMenuOptionValueST(lProfiles[i])
+  ElseIf(option[0] == "ApplyLocProfile")
+    int i = 0
+    While(i < lProfiles.Length)
+      lProfiles[i] = smmProfiles[aiIndex]
+      i += 1
+    EndWhile
+    ForcePageReset()
 
   ElseIf(option[0] == "crtFilterMethod") ; Creature Filter
 		iCrtFilterMethod = aiIndex
@@ -1006,6 +1029,12 @@ Event OnHighlightST()
     SetInfoText("$SMM_DuskTimeHighlight")
   ElseIf(option[0] == "DefDawnTime")
     SetInfoText("$SMM_DawnTimeHighlight")
+
+  ElseIf(option[0] == "shutdownThreads") ; General/Debug
+    SetInfoText("$SMM_ShutDownHighlight")
+
+  ElseIf(option[0] == "ApplyLocProfile") ; location
+    SetInfoText("$SMM_ApplyLocProfileHighlight")
 
   ElseIf(option[0] == "combatSkip") ; Profile
     SetInfoText("$SMM_combatSkipHighlight")

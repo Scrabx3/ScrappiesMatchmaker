@@ -48,7 +48,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   MyScene.Start()
   If(!MyScene.IsPlaying())
     Debug.Trace("[SMM] <Thread> Scene Failed to Start")
-    Stop()
+    RegisterForSingleUpdate(0.1)
   EndIf
 EndEvent
 Function SortByDistance(Actor[] them, int n)
@@ -64,6 +64,10 @@ Function SortByDistance(Actor[] them, int n)
   EndWhile
   them[i + 1] = final
 EndFunction
+
+Event OnUpdate()
+  Stop()
+EndEvent
 
 ; =========================================================================
 ; ============================================ ANIMATIONS
@@ -215,7 +219,7 @@ bool Function ClearActor(ObjectReference that)
   return false
 EndFunction
 
-Function Stop()
+Function CleanUp()
   Debug.Trace("Thread Stopped with Initiator: " + init + "/" + init.GetLeveledActorBase().GetName())
   init.RemoveSpell(GatherSurroundingActors)
   StorageUtil.SetFormValue(init, "Thread", none)
@@ -229,7 +233,6 @@ Function Stop()
   jCd = JValue.release(jCd)
   jActors = JValue.release(jActors)
   jProfile = JValue.release(jProfile)
-  Parent.Stop()
 EndFunction
 Actor Function GetInit()
   return init

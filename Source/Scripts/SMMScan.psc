@@ -23,7 +23,30 @@ Location[] Property Holds Auto
 String filePath = "Data\\SKSE\\SMM\\"
 int jProfile
 
+Keyword zad_lockable
+Keyword ToysToy
+Keyword zbfWornDevice
+Keyword zad_DeviousHeavyBondage
+Keyword zbfEffectWrist
+Keyword ToysEffect_ArmBind
+Keyword ToysEffect_YokeBind
+Keyword zad_DeviousCollar
+Keyword ToysType_Neck
+Keyword zbfWornCollar
 ; --------------- Code
+Event OnInit()
+zad_lockable = Keyword.GetKeyword("zad_lockable")
+ToysToy = Keyword.GetKeyword("ToysToy")
+zbfWornDevice = Keyword.GetKeyword("zbfWornDevice")
+zad_DeviousHeavyBondage = Keyword.GetKeyword("zad_DeviousHeavyBondage")
+zbfEffectWrist = Keyword.GetKeyword("zbfEffectWrist")
+ToysEffect_ArmBind = Keyword.GetKeyword("ToysEffect_ArmBind")
+ToysEffect_YokeBind = Keyword.GetKeyword("ToysEffect_YokeBind")
+zad_DeviousCollar = Keyword.GetKeyword("zad_DeviousCollar")
+ToysType_Neck = Keyword.GetKeyword("ToysType_Neck")
+zbfWornCollar = Keyword.GetKeyword("zbfWornCollar")
+EndEvent
+
 Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRef1, ObjectReference akRef2, int aiValue1, int aiValue2)
   jProfile = aiValue1
   ; Create Scene
@@ -32,8 +55,6 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     Debug.Trace("[SMM] <Scan> No Actors found to animate")
     Stop()
     return
-  Else
-    Debug.Trace("[SMM] <Scan> Actors collected: " + ColAct.Length)
   EndIf
   int i = 0
   While(i < MCM.iMaxScenes)
@@ -94,7 +115,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
 EndEvent
 
 bool Function ValidMatch(Actor init, Actor partner)
-  Debug.Trace("[SMM] Valid Match; Checking: Init: " + init.GetLeveledActorBase().GetName() + "; Partner: " + partner.GetLeveledActorBase().GetName())
+  Debug.Trace("[SMM] Valid Match; Checking: Init: " + init + "; Partner: " + partner)
   If(partner.GetDistance(init) > JMap.getFlt(jProfile, "fDistance") * 70)
     Debug.Trace("[SMM] Valid Match -> Distance Too Great")
     return false
@@ -147,23 +168,14 @@ Actor Function GetInitiator(Actor[] them)
 EndFunction
 
 bool Function ValidInitiator(Actor that)
-  Debug.Trace("[SMM] Checking Initiator: " + that + " -> " + that.GetLeveledActorBase().GetName())
+  Debug.Trace("[SMM] Checking Initiator: " + that + " (" + that.GetLeveledActorBase().GetName() + ")")
   bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
   int jTmp = JMap.getObj(jProfile, "bGenderInit")
   If(that != PlayerRef && (fol && !JArray.getInt(jTmp, 0) || !fol && !JArray.getInt(jTmp, GetActorType(that) + 1)))
     Debug.Trace("[SMM] Invalid Initiator Gender")
     return false
   EndIf
-  int arousal = GetArousal(that)
-  bool aroused
-  If(that == PlayerRef)
-    aroused = arousal >= JMap.getInt(jprofile, "iArousalInitPl")
-  ElseIf(fol)
-    aroused = arousal >= JMap.getInt(jprofile, "iArousalInitFol")
-  Else
-    aroused = arousal >= JMap.getInt(jprofile, "iArousalInit")
-  EndIf
-  Debug.Trace("[SMM] Aroused Check: " + aroused)
+  bool ret
   int alg = JMap.getInt(jProfile, "lAdvInit", 0)
   If(alg != 0)
     Debug.Trace("[SMM] Advanced Algorithm: " + alg)
@@ -173,25 +185,10 @@ bool Function ValidInitiator(Actor that)
       v = JArray.asIntArray(JMap.getObj(jProfile, "ReqAPoints"))
     Else
       v = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
-    EndIf
-    bool[] c = new bool[13]
-    c[0] = GameHour.Value >= MCM.fDuskTime || GameHour.Value < MCM.fDawnTime
-    c[1] = IsThane(that)
-    c[2] = aroused
-    c[3] = !(that.WornHasKeyword(ArmorLight) || that.WornHasKeyword(ArmorHeavy) || that.WornHasKeyword(ArmorClothing))
-    c[4] = !that.WornHasKeyword(ArmorHelmet)
-    c[5] = !that.GetEquippedObject(0) && !that.GetEquippedObject(1)
-    c[6] = !that.IsWeaponDrawn()
-    c[7] = MiscUtil.ScanCellNPCsByFaction(GuardFaction, that).Length == 0
-    c[8] = that.GetActorValuePercentage("Health") < JMap.getFlt(jProfile, "rHealthThresh")
-    c[9] = that.GetActorValuePercentage("Stamina") < JMap.getFlt(jProfile, "rStaminaThresh") || that.GetActorValuePercentage("Magicka") < JMap.getFlt(jProfile, "rMagickaThresh")
-    c[10] = that.WornHasKeyword(Keyword.GetKeyword("zad_lockable")) || that.WornHasKeyword(Keyword.GetKeyword("ToysToy")) || that.WornHasKeyword(Keyword.GetKeyword("zbfWornDevice"))
-    c[11] = c[10] && that.WornHasKeyword(Keyword.GetKeyword("zad_DeviousHeavyBondage")) || that.WornHasKeyword(Keyword.GetKeyword("zbfEffectWrist")) || that.WornHasKeyword(Keyword.GetKeyword("ToysEffect_ArmBind")) || that.WornHasKeyword(Keyword.GetKeyword("ToysEffect_YokeBind"))
-    c[12] = c[10] && that.WornHasKeyword(Keyword.GetKeyword("zad_DeviousCollar")) || that.WornHasKeyword(Keyword.GetKeyword("ToysType_Neck")) || that.WornHasKeyword(Keyword.GetKeyword("zbfWornCollar"))
+    EndIf    
     int i = 0
-    While(i < c.Length)
-      Debug.Trace("[SMM] Conditon " + i + ": " + c[i])
-      If(c[i])
+    While(i < v.Length)
+      If(AdvCon(that, i))
         If(alg == 2) ; Chance Adjust
           p += v[i]
         ElseIf(v[i] == 0) ; Overwrite
@@ -206,21 +203,63 @@ bool Function ValidInitiator(Actor that)
     EndWhile
     If(alg == 1)
       Debug.Trace("[SMM] End Status: " + p + " Required: " + JMap.getInt(jProfile, "iReqPoints"))
-      return p >= JMap.getInt(jProfile, "iReqPoints")
+      ret = p >= JMap.getInt(jProfile, "iReqPoints")
     Else
       Debug.Trace("[SMM] End Status: " + p + " Basechance: " + JMap.getInt(jProfile, "cBaseChance"))
-      return Utility.RandomInt(0, 99) < p + JMap.getInt(jProfile, "cBaseChance")
+      ret = Utility.RandomInt(0, 99) < p + JMap.getInt(jProfile, "cBaseChance")
     EndIf
+  Else
+    Debug.Trace("[SMM] Skip Advanced")
+    ret = AdvCon(that, 2)
   EndIf
-  Debug.Trace("[SMM] Skip Advanced")
-  return aroused
+  Debug.Trace("[SMM] Returning " + ret)
+  return ret
+EndFunction
+
+bool Function AdvCon(Actor that, int i)
+  If(i == 0)
+    return GameHour.Value >= MCM.fDuskTime || GameHour.Value < MCM.fDawnTime
+  ElseIf(i == 1)
+    return IsThane(that)
+  ElseIf(i == 2)
+    int arousal = GetArousal(that)
+    bool aroused
+    If(that == PlayerRef)
+      aroused = arousal >= JMap.getInt(jprofile, "iArousalInitPl")
+    ElseIf(that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate())
+      aroused = arousal >= JMap.getInt(jprofile, "iArousalInitFol")
+    Else
+      aroused = arousal >= JMap.getInt(jprofile, "iArousalInit")
+    EndIf
+    return aroused
+  ElseIf(i == 3)
+    return !(that.WornHasKeyword(ArmorLight) || that.WornHasKeyword(ArmorHeavy) || that.WornHasKeyword(ArmorClothing))
+  ElseIf(i == 4)
+    return !that.WornHasKeyword(ArmorHelmet)
+  ElseIf(i == 5)
+    return !that.GetEquippedObject(0) && !that.GetEquippedObject(1)
+  ElseIf(i == 6)
+    return !that.IsWeaponDrawn()
+  ElseIf(i == 7)
+    return MiscUtil.ScanCellNPCsByFaction(GuardFaction, that).Length == 0
+  ElseIf(i == 8)
+    return that.GetActorValuePercentage("Health") < JMap.getFlt(jProfile, "rHealthThresh")
+  ElseIf(i == 9)
+    return that.GetActorValuePercentage("Stamina") < JMap.getFlt(jProfile, "rStaminaThresh") || that.GetActorValuePercentage("Magicka") < JMap.getFlt(jProfile, "rMagickaThresh")
+  ElseIf(i == 10)
+    return zad_lockable && that.WornHasKeyword(zad_lockable) || ToysToy && that.WornHasKeyword(ToysToy) || zbfWornDevice && that.WornHasKeyword(zbfWornDevice)
+  ElseIf(i == 11)
+    return zad_DeviousHeavyBondage && that.WornHasKeyword(zad_DeviousHeavyBondage) || zbfEffectWrist && that.WornHasKeyword(zbfEffectWrist) || ToysEffect_ArmBind && that.WornHasKeyword(ToysEffect_ArmBind) || that.WornHasKeyword(ToysEffect_YokeBind)
+  ElseIf(i == 12)
+    return zad_DeviousCollar && that.WornHasKeyword(zad_DeviousCollar) || ToysType_Neck && that.WornHasKeyword(ToysType_Neck) || zbfWornCollar && that.WornHasKeyword(zbfWornCollar)
+  EndIf
 EndFunction
 
 ; ===============================================================
 ; =============================  PARTNER
 ; ===============================================================
 bool Function ValidPartner(Actor that)
-  Debug.Trace("[SMM] Checking Partner: " + that + " -> " + that.GetLeveledActorBase().GetName())
+  Debug.Trace("[SMM] Checking Partner: " + that + " (" + that.GetLeveledActorBase().GetName() + ")")
   bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
   int j = JMap.getObj(jProfile, "bGenderPartner")
   If(fol && !JArray.getInt(j, 0) || !fol && !JArray.getInt(j, GetActorType(that) + 1))
@@ -234,7 +273,7 @@ bool Function ValidPartner(Actor that)
   Else
     aroused = arousal >= JMap.getInt(jprofile, "iArousalPartner")
   EndIf
-  Debug.Trace("[SMM] Aroused Check: " + aroused)
+  Debug.Trace("[SMM] Returning " + aroused)
   return aroused
 EndFunction
 
@@ -272,7 +311,7 @@ EndFunction
 ; ===============================================================
 int Function calcThreesome(int cap)
   If(cap < 3)
-    Debug.Trace("[SMM] <Scan> Allowed Number of Participants: " + i + "; Cap: " + cap)
+    Debug.Trace("[SMM] Allowed Number of Participants: " + i + "; Cap: " + cap)
     return cap
   EndIf
   int[] weights = MCM.getXsomeWeight()
@@ -290,7 +329,7 @@ int Function calcThreesome(int cap)
     i += 1
   EndWhile
   i += 1 ; Return number of partners not chamber. (1st Chamber <=> 2some, 2nd chamber <=> 3some, ...)
-  Debug.Trace("[SMM] <Scan> Allowed Number of Participants: " + i + "; Cap: " + cap)
+  Debug.Trace("[SMM] Allowed Number of Participants: " + i + "; Cap: " + cap)
   return i
 EndFunction
 
@@ -342,7 +381,6 @@ bool Function isValidGenderCombination(Actor init, Actor partner)
       sol = MCM.bAssaultNPC[row + GetActorType(init) + 2]
     EndIf
   EndIf
-  Debug.Trace("[SMM] Gender Combination -> " + sol + " => " + init.GetLeveledActorBase().GetName() + "<->" + partner.GetLeveledActorBase().GetName())
   return sol
 EndFunction
 
@@ -356,7 +394,7 @@ bool Function IsValidRace(Actor that)
 	Race myRace = that.GetRace()
   int myPlace = RaceList.Find(myRace)
   If(myPlace < 0)
-    Debug.Trace("[Yamete] isValidCreature() -> Race " + myRace + " returned outside the Valid Range: " + myPlace)
+    Debug.Trace("[SMM] <IsValidRace> " + myRace + " returned outside the Valid Range: " + myPlace)
   Else
     If(myPlace > 51)
       If(myPlace == 81 || myPlace == 82) ; Bear
@@ -396,7 +434,7 @@ bool Function IsValidRace(Actor that)
       ElseIf(myPlace == 52) ; Werewolf
         myPlace = 49
       else
-        Debug.Trace("[Yamete] isValidCreature() -> Race " + myRace + " returned outside the Valid Range: " + myPlace)
+        Debug.Trace("[SMM] <IsValidRace> " + myRace + " returned outside the Valid Range: " + myPlace)
       EndIf
     EndIf
     allow = MCM.bValidRace[myPlace]

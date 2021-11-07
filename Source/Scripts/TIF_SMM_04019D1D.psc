@@ -6,7 +6,7 @@ Scriptname TIF_SMM_04019D1D Extends TopicInfo Hidden
 Function Fragment_0(ObjectReference akSpeakerRef)
 Actor akSpeaker = akSpeakerRef as Actor
 ;BEGIN CODE
-(GetOwningQuest() as SMMThread).Stop()
+getOwningQuest().stop()
 ;END CODE
 EndFunction
 ;END FRAGMENT
