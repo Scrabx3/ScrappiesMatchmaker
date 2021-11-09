@@ -78,15 +78,18 @@ Event OnPlayerLoadGame()
     tmpFac.SetAlly(FriendFaction, true, true)
     i += 1
   EndWhile
+  ; Mod Events
+  RegisterForModEvent("dhlp-Suspend", "SuspendMod")
+  RegisterForModEvent("dhlp-Resume", "ResumeMod")
 EndEvent
 
 Event OnKeyDown(int keyCode)
   MCM.bPaused = !MCM.bPaused
-  RegisterForSingleUpdate(MCM.iTickInterval)
   If(MCM.bPaused)
     Debug.Notification("ScRappies Matchmaker paused")
   Else
     Debug.Notification("ScRappies Matchmaker enabled")
+    RegisterForSingleUpdate(MCM.iTickInterval)
   EndIf
 EndEvent
 
@@ -101,6 +104,9 @@ EndFunction
 
 Event OnUpdate()
   ; Debug.Notification("<SMM> Scanning with Profile: { " + locProfile + " }")
+  If(MCM.bPaused)
+    return
+  EndIf
   If(locProfile == "$SMM_Disabled")
     Debug.Trace("[SMM] <Player> <Update> Invalid Profile")
   ElseIf(DoScan() == false)
@@ -124,7 +130,7 @@ Event OnUpdate()
 EndEvent
 
 bool Function DoScan()
-  return !(MCM.bPaused || UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
+  return !(UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
 EndFunction
 
 ; =============================================================
@@ -202,7 +208,17 @@ Event OnLocationChange(Location akOldLoc, Location akNewLoc)
   EndIf
   Debug.Trace("[SMM] Changed Location <Index " + p + " >")
   locProfile = MCM.lProfiles[p]
-  If(MCM.bLocationScan && DoScan())
+  If(MCM.bLocationScan)
     OnUpdate()
   EndIf
+EndEvent
+
+
+Event SuspendMod(string asEventName, string asStringArg, float afNumArg, form akSender)
+  MCM.bPaused = true
+EndEvent
+
+Event ResumeMod(string asEventName, string asStringArg, float afNumArg, form akSender)
+  MCM.bPaused = false
+  RegisterForSingleUpdate(MCM.iTickInterval)
 EndEvent

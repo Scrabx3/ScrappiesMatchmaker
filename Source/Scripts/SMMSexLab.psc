@@ -37,7 +37,7 @@ Function StartSceneSingle(Actor that, String hook) global
   SexLabUtil.QuickStart(that, hook = hook)
 EndFunction
 
-int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] others, int asVictim, string hook = "") Global
+int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] partners, int asVictim, string hook = "") Global
   SexLabFramework SL = Quest.GetQuest("SexLabQuestFramework") as SexLabFramework
   If(SL.Enabled == false)
     return -1
@@ -45,8 +45,8 @@ int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] others, int asVicti
     return -1
   ELse
     int i = 0
-    While(i < others.length)
-      If(SL.IsValidActor(others[i]) == false)
+    While(i < partners.length)
+      If(SL.IsValidActor(partners[i]) == false)
         return -1
       EndIf
       i += 1
@@ -56,7 +56,7 @@ int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] others, int asVicti
   If(asVictim == 1)
     victim = first
   EndIf
-  others = SL.SortActors(PapyrusUtil.PushActor(others, first))
+  Actor[] others = SL.SortActors(PapyrusUtil.PushActor(partners, first))
   int fg = SL.GetGender(first)
   sslBaseAnimation[] anims
 	bool breakLoop = false

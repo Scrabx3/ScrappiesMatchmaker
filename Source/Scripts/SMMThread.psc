@@ -23,10 +23,10 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   jCd = JValue.retain(JValue.readFromFile("Data\\SKSE\\SMM\\Definition\\Cooldowns.json"))
   init = akRef1 as Actor
   jActors = aiValue1
-  jProfile = aiValue2
+  jProfile = JValue.retain(aiValue2)
   consent = JMap.getInt(jProfile, "bConsent")
   Debug.Trace("[SMM] Started Thread. ID: " + Self + " | Initiator: " + init + "| Name: " + init.GetLeveledActorBase().GetName())
-  If(jActors > 0)
+  If(jActors != 0)
     ; Fill Aliases
     Form[] jActorForms = JArray.asFormArray(jActors)
     partners = PapyrusUtil.ActorArray(jActorForms.Length)
@@ -35,39 +35,77 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
       partners[i] = jActorForms[i] as Actor
       i += 1
     EndWhile
-    SortByDistance(partners, partners.Length)
+    DefClosest(partners)
     int n = 0
     While(n < partners.Length)
       (GetNthAlias(n + 1) as ReferenceAlias).ForceRefTo(partners[n])
       partners[n].StopCombat()
       partners[n].StopCombatAlarm()
+      partners[n].EvaluatePackage()
       n += 1
     EndWhile
   EndIf
   ; Start Scene
   MyScene.Start()
   If(!MyScene.IsPlaying())
-    Debug.Trace("[SMM] <Thread> Scene Failed to Start")
-    RegisterForSingleUpdate(0.1)
+    Debug.Trace("[SMM] " + Self + " Scene Failed to Start")
+    Stop()
   EndIf
 EndEvent
-Function SortByDistance(Actor[] them, int n)
-  If(n <= 1)
-    return
-  EndIf
-  SortByDistance(them, n - 1)
-  Actor final = them[n - 1]
-  int i = n - 2
-  While(i >= 0 && them[i].GetDistance(init) > final.GetDistance(init))
-    them[i + 1] = them[i]
-    i -= 1
+Function DefClosest(Actor[] them)
+  float c = them[0].GetDistance(init)
+  int slot0 = 0
+  int i = 1
+  While(i < them.Length)
+    float d = them[i].GetDistance(init)
+    If(d < c)
+      c = d
+      slot0 = i
+    EndIf
+    i += 1
   EndWhile
-  them[i + 1] = final
+  If(slot0 != 0)
+    Actor tmp = them[0]
+    them[0] = them[slot0]
+    them[slot0] = tmp
+  EndIf
 EndFunction
 
-Event OnUpdate()
-  Stop()
-EndEvent
+; Called from the Quest Scene after Init has been approached
+Function StartScene()
+  If(init == Game.GetPlayer())
+    Game.SetPlayerAIDriven(true)
+  Else
+    init.SetRestrained(true)
+  EndIf
+  hook = GetID()
+  RegisterForModEvent("HookAnimationEnd_" + hook, "AfterSceneSL")
+  RegisterForModEvent("ostim_end", "AfterSceneOStim")
+  scenesPlayed = 1
+  If(jActors == 0) ; Empty Array, 1p Scene
+    int s = SMMAnimFrame.StartAnimationSingle(MCM, init, hook)
+    String initName = init.GetLeveledActorBase().GetName()
+    If(s == -1)
+      Debug.Trace("[SMM] " + Self + " Failed to start 1p Animation | Initiator: " + init + " | Name: " + initName)
+      Stop()
+      return
+    EndIf
+    Debug.Trace("[SMM] " + Self + " Successfully started 1p Animation | Initiator: " + init + " | Name: " + initName)
+  Else ; 2p+ Scene
+    Actor[] them = PapyrusUtil.ActorArray(partners.Length)
+    int i = 0
+    While(i < partners.Length)
+      If(partners[i].GetDistance(init) < 650)
+        them[i] = partners[i]
+      EndIf
+      i += 1
+    EndWhile
+    partners = PapyrusUtil.RemoveActor(them, none)
+    StartAnimation()
+  EndIf
+  StorageUtil.SetFormValue(init, "Thread", Self)
+  init.AddSpell(GatherSurroundingActors, false)
+EndFunction
 
 ; =========================================================================
 ; ============================================ ANIMATIONS
@@ -75,70 +113,32 @@ EndEvent
 int scenesPlayed
 String hook
 
-Function StartScene()
-  hook = GetFormID()
-  scenesPlayed = 1
-  If(jActors == 0) ; Empty Array, 1p Scene
-    int s = SMMAnimFrame.StartAnimationSingle(MCM, init, hook)
-    String initName = init.GetLeveledActorBase().GetName()
-    If(s == -1)
-      Debug.Trace("[SMM] Failed to start 1p Animation on Thread " + Self + " | Initiator: " + init + " | Name: " + initName)
-      Stop()
-      return
-    ElseIf(s == 0)
-      RegisterForModEvent("HookAnimationEnd_" + hook, "AfterSceneSL")
-    ElseIf(s == 1)
-      RegisterForModEvent("ostim_end", "AfterSceneOStim")
-    EndIf
-    Debug.Trace("[SMM] Successfully started 1p Animation on Thread " + Self + " | Initiator: " + init + " | Name: " + initName)
-  Else ; 2p+ Scene
-    Actor[] them = PapyrusUtil.ActorArray(partners.Length)
-    int i = 0
-    int ii = 0
-    While(i < partners.Length)
-      If(partners[i].GetDistance(init) < 650)
-        ClearActor(partners[i])
-        them[ii] = partners[i]
-        ii += 1        
-      EndIf
-      i += 1
-    EndWhile
-    partners = them
-    StartAnimation()
-  EndIf
-  StorageUtil.SetFormValue(init, "Thread", Self)
-  init.AddSpell(GatherSurroundingActors, false)
-EndFunction
-
 Function StartAnimation()
   String initName = init.GetLeveledActorBase().GetName()
-  int s = SMMAnimFrame.StartAnimation(MCM, init, partners, consent, hook)
+  int s = SMMAnimFrame.StartAnimation(MCM, init, partners, Math.abs(consent - 1) as int, hook)
   If(s == -1)
-    Debug.Trace("[SMM] Failed to start Thread Animation " + scenesPlayed + " | Thread ID:" + Self + " | Initiator: " + init + " | Name: " + initName)
+    Debug.Trace("[SMM] " + Self + " Failed to Start 2p+ Animation " + scenesPlayed + " | Initiator: " + init + " | Name: " + initName)
     Stop()
     return
-  ElseIf(s == 0)
-    RegisterForModEvent("HookAnimationEnd_" + hook, "AfterSceneSL")
-  ElseIf(s == 1)
-    RegisterForModEvent("ostim_end", "AfterSceneOStim")
   EndIf
-  Debug.Trace("[SMM] Successfully started Thread Animation " + scenesPlayed + " | Thread ID:" + Self + " | Initiator: " + init + " | Name: " + initName)
+  Debug.Trace("[SMM] " + Self + " Successfully started 2p+ Animation " + scenesPlayed + " | Initiator: " + init + " | Name: " + initName)
 EndFunction
 Event AfterSceneSL(int tid, bool hasPlayer)
+  Debug.Trace("[SMM] " + Self + " Animation End (SL) on Thread ")
   PostScene(-2)
 EndEvent
 Event AfterSceneOStim(string asEventName, string asStringArg, float afNumArg, form akSender)
+  Debug.Trace("[SMM] " + Self + " Animation End (OStim) on Thread ")
   PostScene(afNumArg as int)
 EndEvent
 Function PostScene(int ID)
   If(ID > -2)
     If(SMMOstim.FindInit(init, ID) == false)
+      Debug.Trace("[SMM] " + Self + " Unrelated OStim End")
       return
     EndIf
   EndIf
   String initName = init.GetLeveledActorBase().GetName()
-  Debug.Trace("[SMM] Post Scene on Thread " + Self + " | Animations: " + scenesPlayed + " | Initiator: " + init + " | Name: " + initName)
-  return
   If(jActors == 0 || !playNextScene())
     ; Only 1 1p Scene or max Multi Scenes reached
     SetStage(5)
@@ -156,7 +156,7 @@ Function PostScene(int ID)
       n += 1
     EndWhile
     ; Update Partner Array
-    int maxPartners = Scan.calcThreesome(5) - 1
+    int maxPartners = Scan.GetNumPartners(4)
     If(maxPartners != partners.Length)
       If(maxPartners < partners.Length)
         int i = partners.Length
@@ -168,14 +168,14 @@ Function PostScene(int ID)
       partners = PapyrusUtil.ResizeActorArray(partners, maxPartners)
     EndIf
     Alias[] them = GetAliases()
-    int i = 1
+    int i = 1 ; 0 is Init
     int ii = 0
     While(i < them.Length && ii < maxPartners)
       Actor tmp = (them[i] as ReferenceAlias).GetReference() as Actor
       If(tmp && partners.Find(tmp) == -1 && Utility.RandomFloat(0, 99.9) < MCM.fAddActorChance)
         int empty = partners.Find(none)
         If(empty > -1)
-          If(Scan.isValidGenderCombination(init, tmp) && Scan.IsValidRace(tmp) && Scan.ValidPartner(tmp) && Scan.ValidMatch(init, tmp))
+          If(Scan.isValidGenderCombination(init, tmp) && Scan.IsValidRace(tmp) && Scan.ValidPartner(tmp, jProfile) && Scan.ValidMatch(init, tmp, jProfile))
             partners[empty] = tmp
             ii += 1
           EndIf
@@ -186,19 +186,24 @@ Function PostScene(int ID)
       i += 1
     EndWhile
     partners = PapyrusUtil.RemoveActor(partners, none)
-    StartAnimation()
+    If(partners.Length)
+      StartAnimation()
+    Else
+      SetStage(5)
+    EndIf
   EndIf
 EndFunction
 bool Function playNextScene()
-	return MCM.iResMaxRounds > scenesPlayed || MCM.iResMaxRounds == 0
+	return MCM.iResMaxRounds == 0 || scenesPlayed < MCM.iResMaxRounds
 EndFunction
 
-bool Function AddActor(ObjectReference that)
+bool Function AddActor(Actor that)
   Alias[] them = GetAliases()
   int i = 1
   While(i < them.Length)
     ReferenceAlias tmp = them[i] as ReferenceAlias
     If(tmp.ForceRefIfEmpty(that))
+      that.EvaluatePackage()
       return true
     EndIf
     i += 1
@@ -220,7 +225,12 @@ bool Function ClearActor(ObjectReference that)
 EndFunction
 
 Function CleanUp()
-  Debug.Trace("Thread Stopped with Initiator: " + init + "/" + init.GetLeveledActorBase().GetName())
+  Debug.Trace("[SMM] " + Self + " Thread Stopped with Initiator: " + init + " (" + init.GetLeveledActorBase().GetName() + ")")
+  If(init == Game.GetPlayer())
+    Game.SetPlayerAIDriven(false)
+  Else
+    init.SetRestrained(false)
+  EndIf
   init.RemoveSpell(GatherSurroundingActors)
   StorageUtil.SetFormValue(init, "Thread", none)
   JMap.setFlt(jCd, init.GetFormID(), Scan.GameDaysPassed.Value)
@@ -235,5 +245,5 @@ Function CleanUp()
   jProfile = JValue.release(jProfile)
 EndFunction
 Actor Function GetInit()
-  return init
+  return partners[0]
 EndFunction

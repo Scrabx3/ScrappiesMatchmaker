@@ -159,7 +159,7 @@ Function Initialize()
   lAdvancedInitList[1] = "$SMM_AdvInit_1" ; Chance
   lAdvancedInitList[2] = "$SMM_AdvInit_2" ; Points
 
-  lReqList = new String[8]
+  lReqList = new String[9]
   lReqList[0] = "$SMM_RequirementList_0" ; Overwrite
   lReqList[1] = "$SMM_RequirementList_1" ; Mandatory
   lReqList[2] = "$SMM_RequirementList_2" ; +3
@@ -168,7 +168,7 @@ Function Initialize()
   lReqList[5] = "$SMM_RequirementList_5" ; Ignore
   lReqList[6] = "$SMM_RequirementList_6" ; -1
   lReqList[7] = "$SMM_RequirementList_7" ; -2
-  lReqList[7] = "$SMM_RequirementList_8" ; -3
+  lReqList[8] = "$SMM_RequirementList_8" ; -3
 
   crtFilterMethodList = new string[4]
 	crtFilterMethodList[0] = "$SMM_scrFilterMethod_0" ; All Creatures
@@ -296,7 +296,7 @@ Event OnPageReset(string Page)
     AddMenuOptionST("AdvConAlg", "$SMM_AdvConAlg", lAdvancedInitList[aca])
     i = 0
     If(aca == 2) ; Points
-      AddSliderOptionST("ReqPointsBase", classColors[3] + "$SMM_ReqPoints", JMap.getInt(jProfile, "iReqPoints"), "{0}")
+      AddSliderOptionST("ReqPointsBase", classColors[3] + "$SMM_ReqPoints</color>", JMap.getInt(jProfile, "iReqPoints"), "{0}")
       int[] c = JArray.asIntArray(JMap.getObj(jProfile, "reqAPoints"))
       While(i < c.Length)
         AddMenuOptionST("reqPoints_" + i, "$SMM_AdvCon_" + i, lReqList[c[i]])
@@ -312,9 +312,8 @@ Event OnPageReset(string Page)
       While(i < c.Length)
         AddSliderOptionST("aChances_" + i, "$SMM_AdvCon_" + i, c[i], "{1}%", getFlag(aca == 1))
         If(i == 6)
-          SetCursorPosition(35)
+          SetCursorPosition(37)
           AddTextOptionST("AdvCondition", "$SMM_Help", none)
-          AddEmptyOption()
         EndIf
         i += 1
       EndWhile
@@ -345,8 +344,8 @@ Event OnPageReset(string Page)
   ElseIf(Page == "$SMM_Threading")
     AddHeaderOption("$SMM_Threading")
     AddSliderOptionST("TMaxRounds", "$SMM_TMaxRounds", iResMaxRounds, "{0}")
-    AddSliderOptionST("TNextRound", "$SMM_TNextRound", fResNextRoundChance, "{0}%")
-    AddSliderOptionST("TAddActor", "$SMM_TAddActor", fAddActorChance, "{0}%")
+    AddSliderOptionST("TNextRound", "$SMM_TNextRound", fResNextRoundChance, "{1}%")
+    AddSliderOptionST("TAddActor", "$SMM_TAddActor", fAddActorChance, "{1}%")
     AddHeaderOption("$SMM_PlayerThread")
     AddSliderOptionST("TStalkTime", "$SMM_TStalkTime", iStalkTime, "{0}s")
     AddToggleOptionST("TStalkNotify", "$SMM_TStalkNotify", bStalkNotify)
@@ -354,7 +353,7 @@ Event OnPageReset(string Page)
     
     SetCursorPosition(1)
     AddHeaderOption("$SMM_Spectators")
-    AddSliderOptionST("SpecChance", "$SMM_SpectatorChance", fSpecChance, "{0}%")
+    AddSliderOptionST("SpecChance", "$SMM_SpectatorChance", fSpecChance, "{1}%")
     AddToggleOptionST("SpecGender", "$SMM_SpectatorGender", bSpecGender)
     AddToggleOptionST("SpecCrt", "$SMM_SpectatorCreature", bSpecCrt)
 
@@ -509,7 +508,7 @@ Event OnSelectST()
     SetToggleOptionValueST(bStalkNotify)
     SetOptionFlagsST(getFlag(bStalkNotify), a_stateName = "TStalkNotifyName")
   ElseIf(option[0] == "TStalkNotifyName")
-    bStalkNotifyName = !bStalkNotify
+    bStalkNotifyName = !bStalkNotifyName
     SetToggleOptionValueST(bStalkNotifyName)
 	ElseIf(option[0] == "SpecGender")
 		bSpecGender = !bSpecGender
@@ -562,7 +561,7 @@ Event OnSelectST()
 		bValidRace[i] = !bValidRace[i]
 		SetToggleOptionValueST(bValidRace[i])
 
-  ElseIf(option[0] == "ProfilesHelp")
+  ElseIf(option[0] == "locProfileHelp")
     ShowMessage("$SMM_ProfileHelp", false, "$SMM_Ok")
   ElseIf(option[0] == "AdvCondition")
     ShowMessage("$SMM_ReqConditioningHelp0", false, "$SMM_Ok")
@@ -587,8 +586,8 @@ Event OnSliderOpenST()
     SetSliderDialogInterval(1)
   ElseIf(option[0] == "ScenesPerScan")
     SetSliderDialogStartValue(iMaxScenes)
-    SetSliderDialogDefaultValue(20)
-    SetSliderDialogRange(5, 300)
+    SetSliderDialogDefaultValue(1)
+    SetSliderDialogRange(1, 5)
     SetSliderDialogInterval(1)
   ElseIf(option[0] == "ScanRadius")
     SetSliderDialogStartValue(gScanRadius.Value/70)
@@ -783,19 +782,19 @@ Event OnSliderAcceptST(Float afValue)
   String[] option = PapyrusUtil.StringSplit(GetState(), "_")
   If(option[0] == "TickInterval") ; General
     iTickInterval = afValue as Int
-    SetSliderOptionValueST(iTickInterval, "{0}")
+    SetSliderOptionValueST(iTickInterval, "{0}s")
   ElseIf(option[0] == "ScenesPerScan")
     iMaxScenes = afValue as Int
     SetSliderOptionValueST(iMaxScenes, "{0}")
   ElseIf(option[0] == "ScanRadius")
     gScanRadius.Value = afValue * 70
-    SetSliderOptionValueST(gScanRadius.Value/70, "{0}")
+    SetSliderOptionValueST(gScanRadius.Value/70, "{0}m")
   ElseIf(option[0] == "DefDuskTime")
     fDuskTime = afValue as Int
-    SetSliderOptionValueST(fDuskTime, "{0}0")
+    SetSliderOptionValueST(fDuskTime, "{1}0")
   ElseIf(option[0] == "DefDawnTime")
     fDawnTime = afValue as Int
-    SetSliderOptionValueST(fDawnTime, "{0}0")
+    SetSliderOptionValueST(fDawnTime, "{1}0")
     
   ElseIf(option[0] == "ArousalInit") ; Profile
     JMap.setInt(jProfile, "iArousalInit", afValue as int)
@@ -808,7 +807,7 @@ Event OnSliderAcceptST(Float afValue)
     SetSliderOptionValueST(afValue, "{0}")
   ElseIf(option[0] == "PlayerInit")
     JMap.setInt(jProfile, "fPlayerInit", afValue as int)
-    SetSliderOptionValueST(afValue, "{0}")
+    SetSliderOptionValueST(afValue, "{1}%")
   ElseIf(option[0] == "ArousalPartner")
     JMap.setInt(jProfile, "iArousalPartner", afValue as int)
     SetSliderOptionValueST(afValue, "{0}")
@@ -841,7 +840,7 @@ Event OnSliderAcceptST(Float afValue)
     SetSliderOptionValueST(afValue, "{1}%")
   ElseIf(option[0] == "aChances")
     int i = option[1] as int
-    int jTmp = JMap.getInt(jProfile, "cAChances")
+    int jTmp = JMap.getObj(jProfile, "cAChances")
     JArray.setFlt(jTmp, i, afValue)
     JMap.setObj(jProfile, "cAChances", jTmp)
     SetSliderOptionValueST(afValue, "{1}%")
@@ -879,19 +878,19 @@ Event OnSliderAcceptST(Float afValue)
 
 	ElseIf(option[0] == "ostimMinD") ; Animation Frame
 		fOtMinD = afValue
-		SetSliderOptionValueST(fOtMinD)
+		SetSliderOptionValueST(fOtMinD, "{0}s")
 	ElseIf(option[0] == "ostimMaxD")
 		fOtMaxD = afValue
-		SetSliderOptionValueST(fOtMaxD)
+		SetSliderOptionValueST(fOtMaxD, "{0}s")
 	ElseIf(option[0] == "af1pWeightFol")
 		fAFMasturbateFol = afValue
-		SetSliderOptionValueST(fAFMasturbateFol)
+		SetSliderOptionValueST(fAFMasturbateFol, "{1}%")
 	ElseIf(option[0] == "af1pWeightNPC")
 		fAFMasturbateNPC = afValue
-		SetSliderOptionValueST(fAFMasturbateNPC)
+		SetSliderOptionValueST(fAFMasturbateNPC, "{1}%")
 	ElseIf(option[0] == "af1pWeightCrt")
 		fAFMasturbateCrt = afValue
-		SetSliderOptionValueST(fAFMasturbateCrt)
+		SetSliderOptionValueST(fAFMasturbateCrt, "{1}%")
 	ElseIf(option[0] == "af2pWeight")
 		iAF2some = afValue as int
 		SetSliderOptionValueST(iAF2some)

@@ -9,6 +9,10 @@ int Function GetVersion() global
   return OUtils.GetOstim().GetAPIVersion()
 EndFunction
 
+bool Function IsPlayerPartner(Actor that) global
+  return OUtils.GetNPCDataBool(that, "or_k_part")
+EndFunction
+
 bool Function FindInit(Actor that, int ID) global
   OSexIntegrationMain OStim = OUtils.GetOstim()
   If(ID == -1)
@@ -31,6 +35,10 @@ int Function StartScene(SMMMCM MCM, Actor first, Actor[] others, int asVictim) g
   Actor third = none
   If(others.length > 1)
     third = others[1]
+  EndIf
+  If(asVictim)
+    OStim.AddSceneMetadata("or_player_nocheat")
+    OStim.AddSceneMetadata("or_npc_nocheat")
   EndIf
   If(hasPlayer)
     If(OStim.StartScene(others[0], first, false, true, false, zThirdActor = third, aggressive = asVictim, AggressingActor = others[0]))

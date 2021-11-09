@@ -15,8 +15,9 @@ Function Fragment_2()
 ;BEGIN CODE
 SMMThread t = GetOwningQuest() as SMMThread
 If(t.consent == 0)
-  t.StartScene()
   reached = true
+  t.StartScene()
+	UnregisterForUpdate()
 EndIf
 ;END CODE
 EndFunction
@@ -29,7 +30,6 @@ SMMThread t = GetOwningQuest() as SMMThread
 If(t.consent == 0)
   RegisterForSingleUpdate(t.MCM.iStalkTime)
   If(t.MCM.bStalkNotify)
-    Debug.Notification("You get the feeling as if someone is lurking up to you")
 		If(t.MCM.bStalkNotifyName)
 			Debug.Notification(t.GetInit().GetLeveledActorBase().GetName() + " is trying to Lurk up to you.")
 		Else

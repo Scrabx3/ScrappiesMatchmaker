@@ -8,10 +8,15 @@ SMMMCM Property MCM Hidden
 EndProperty
 
 Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked)
-  If(GetOwningQuest().GetStage() < 20)
-    return    
-  EndIf
   If(MCM.bSLAllowed)
-    SMMSexLab.stopAnimation(GetReference() as Actor)
+    If(SMMSexLab.stopAnimation(GetReference() as Actor) > -1)
+      GetOwningQuest().Stop()
+    EndIf
+  EndIf
+EndEvent
+
+Event OnCombatStateChanged(Actor akTarget, int aeCombatState)
+  If(aeCombatState == 1)
+    GetOwningQuest().Stop()
   EndIf
 EndEvent
