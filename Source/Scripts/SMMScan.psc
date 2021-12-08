@@ -152,7 +152,7 @@ EndFunction
 ; =============================  INITIATOR
 ; ===============================================================
 Actor Function GetInitiator(Actor[] them)
-  If(!PlayerRef.HasKeywordString("SMM_ThreadActor") && ValidInitiator(PlayerRef))
+  If(!PlayerRef.HasKeywordString("SMM_ThreadActor") && Utility.RandomFloat(0, 99.9) < JMAp.getFlt(jProfile, "fPlayerInit") && ValidInitiator(PlayerRef))
     return PlayerRef
   EndIf
   int i = 0 
@@ -187,27 +187,29 @@ bool Function ValidInitiator(Actor that)
     Debug.Trace("[SMM] Advanced Algorithm: " + alg)
     int p = 0
     int[] v
-    If(alg == 1)
+    If(alg == 2)
       v = JArray.asIntArray(JMap.getObj(jProfile, "ReqAPoints"))
+      ; v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
     Else
       v = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
+      ; v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "cAChances"))
     EndIf    
     int i = 0
     While(i < v.Length)
       If(AdvCon(that, i))
-        If(alg == 2) ; Chance Adjust
+        If(alg == 1) ; Chance Adjust
           p += v[i]
         ElseIf(v[i] == 0) ; Overwrite
           return true
         ElseIf(v[i] != 1) ; Points Adjust (1 <=> Mandatory)
           p += 5 - v[i]
         EndIf
-      ElseIf(alg == 1 && v[i] == 1) ; Mandatory False
+      ElseIf(alg == 2 && v[i] == 1) ; Mandatory False
         return false
       EndIf
       i += 1
     EndWhile
-    If(alg == 1)
+    If(alg == 2)
       Debug.Trace("[SMM] End Status: " + p + " Required: " + JMap.getInt(jProfile, "iReqPoints"))
       ret = p >= JMap.getInt(jProfile, "iReqPoints")
     Else

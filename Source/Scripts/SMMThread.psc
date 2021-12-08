@@ -15,12 +15,13 @@ Actor[] partners
 ; NOTE: partners includes a Set of Actors which participated in the previous Animation. They are also always an Alias in this Thread
 ; After an Animation ended there will be a quick Check if a Partner should stay interested, otherwise they are sorted out of the Array and Quest
 ; New Actors may be added to the Quest during an Animation and will be added to this Partners Array if possible
+String filePathCooldown = "Data\\SKSE\\SMM\\Definition\\Cooldowns.json"
 
 ; =========================================================================
 ; ============================================ START UP
 ; ========================================================================
 Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRef1, ObjectReference akRef2, int aiValue1, int aiValue2)
-  jCd = JValue.retain(JValue.readFromFile("Data\\SKSE\\SMM\\Definition\\Cooldowns.json"))
+  jCd = JValue.retain(JValue.readFromFile(filePathCooldown))
   init = akRef1 as Actor
   jActors = aiValue1
   jProfile = JValue.retain(aiValue2)
@@ -29,6 +30,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   If(jActors != 0)
     ; Fill Aliases
     Form[] jActorForms = JArray.asFormArray(jActors)
+    ; Form[] jActorForms = SMMMCM.asJFormArray(jActors)
     partners = PapyrusUtil.ActorArray(jActorForms.Length)
     int i = 0
     While(i < partners.length)
@@ -103,7 +105,7 @@ Function StartScene()
     partners = PapyrusUtil.RemoveActor(them, none)
     StartAnimation()
   EndIf
-  StorageUtil.SetFormValue(init, "Thread", Self)
+  StorageUtil.SetFormValue(init, "SMMThread", Self)
   init.AddSpell(GatherSurroundingActors, false)
 EndFunction
 
@@ -239,7 +241,7 @@ Function CleanUp()
     JMap.setFlt(jCd, partners[i].GetFormID(), Scan.GameDaysPassed.Value)
     i += 1
   EndWhile
-  JValue.writeToFile(jCd, "Data\\SKSE\\SMM\\Definition\\Cooldowns.json")
+  JValue.writeToFile(jCd, filePathCooldown)
   jCd = JValue.release(jCd)
   jActors = JValue.release(jActors)
   jProfile = JValue.release(jProfile)

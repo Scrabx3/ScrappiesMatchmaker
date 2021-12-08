@@ -9,8 +9,10 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
   If(MCM.bSpecGender && npc && !Scan.isValidGenderCombination(akCaster, akTarget) || !npc && !MCM.bSpecCrt || Utility.RandomFloat(0, 99.9) >= MCM.fSpecChance)
     return
   EndIf
-  SMMThread t = StorageUtil.GetFormValue(akCaster, "Thread") as SMMThread
-  If(t)
+  SMMThread t = StorageUtil.GetFormValue(akCaster, "SMMThread") as SMMThread
+  If(t != none)
     t.AddActor(akTarget)
+  Else
+    Debug.Trace("[SMM] ThreadQuest not found on Caster " + akCaster)
   EndIf
 EndEvent

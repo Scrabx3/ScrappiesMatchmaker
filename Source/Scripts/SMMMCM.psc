@@ -298,6 +298,7 @@ Event OnPageReset(string Page)
     If(aca == 2) ; Points
       AddSliderOptionST("ReqPointsBase", classColors[3] + "$SMM_ReqPoints</color>", JMap.getInt(jProfile, "iReqPoints"), "{0}")
       int[] c = JArray.asIntArray(JMap.getObj(jProfile, "reqAPoints"))
+      ; int[] c = asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
       While(i < c.Length)
         AddMenuOptionST("reqPoints_" + i, "$SMM_AdvCon_" + i, lReqList[c[i]])
         If(i == 6)
@@ -309,6 +310,7 @@ Event OnPageReset(string Page)
     Else ; Chance (or none)
       AddSliderOptionST("chanceBase", classColors[3] + "$SMM_BaseChance", JMap.getInt(jProfile, "cBaseChance"), "{1}%", getFlag(aca == 1))
       int[] c = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
+      ; int[] c = asJIntArray(JMap.getObj(jProfile, "cAChances"))
       While(i < c.Length)
         AddSliderOptionST("aChances_" + i, "$SMM_AdvCon_" + i, c[i], "{1}%", getFlag(aca == 1))
         If(i == 6)
@@ -678,6 +680,7 @@ Event OnSliderOpenST()
   ElseIf(option[0] == "aChances")
     int i = option[1] as int
     int[] c = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
+    ; int[] c = asJIntArray(JMap.getObj(jProfile, "cAChances"))
     SetSliderDialogStartValue(c[i])
     SetSliderDialogDefaultValue(0)
     SetSliderDialogRange(-100, 100)
@@ -1297,3 +1300,28 @@ int Function getFlag(bool option)
 		return OPTION_FLAG_DISABLED
 	EndIf
 endFunction
+
+; JContainers in LE is outdated. Lil workaround Functions to get Array manually
+; Dw lads, its just JContainers and 20 other Utilities, LE is still doing fiiiine
+Form[] Function AsJFormArray(int jObj) global
+  int m = JArray.count(jObj)
+  Form[] ret = PapyrusUtil.FormArray(m)
+  int i = 0
+  While(i < m)
+    ret[i] = JArray.getForm(jObj, i)
+    i += 1
+  EndWhile
+  return ret
+EndFunction
+
+int[] Function AsJIntArray(int jObj) global
+  int m = JArray.count(jObj)
+  int[] ret = Utility.CreateIntArray(m)
+  int i = 0
+  While(i < m)
+    ret[i] = JArray.getInt(jObj, i)
+    i += 1
+  EndWhile
+  return ret
+EndFunction
+

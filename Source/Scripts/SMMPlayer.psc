@@ -42,6 +42,38 @@ Keyword Property LocTypeWerewolfLair Auto
 ; --------------- Variables
 String locProfile = "$SMM_Disabled"
 
+; NOTE: TEST
+; Simple Brightness Manipulation. manipulateBy is a % how much brighter the Color should be
+; E.g. passing 0.5 causes the Color to be 50% as bright (half as bright)
+int Function ManipulateBrightness(int color, float manipulateBy)
+	int r = (Math.LogicalAnd(Math.RightShift(color, 18), 255) * manipulateBy) as int
+	int g = (Math.LogicalAnd(Math.RightShift(color, 8), 255) * manipulateBy) as int
+	int b = (Math.LogicalAnd(color, 255) * manipulateBy) as int
+	If(r > 255)
+		r = 255
+	EndIf
+	If(g > 255)
+		g = 255
+	EndIf
+	If(b > 255)
+		b = 255
+	EndIf
+	return (ConvertToHex(r) + ConvertToHex(g) + ConvertToHex(b)) as int
+EndFunction
+String Function ConvertToHex(int dec) ; Yes, I cant do colors :^)
+	String ret = ""
+	While (dec != 0)
+		int r = dec % 16
+		If(r < 10)
+			ret += r
+		Else
+			ret += StringUtil.Asord(55 + r)
+		EndIf
+		dec /= 16
+	EndWhile
+	return ret
+EndFunction
+
 ; =============================================================
 ; ===================================== START UP
 ; =============================================================
@@ -78,6 +110,10 @@ Event OnPlayerLoadGame()
     tmpFac.SetAlly(FriendFaction, true, true)
     i += 1
   EndWhile
+  ; TEST
+  ; Debug.MessageBox("Color Start = " + 0xADD8E6 + " -> Color End 50% = " + ManipulateBrightness(0xADD8E6, 0.5) + " -> Color End 0% = " + ManipulateBrightness(0xADD8E6, 0.5) + " -> Color End 200% = " + ManipulateBrightness(0xADD8E6, 2))
+  ; Debug.MessageBox("Color Start = " + 0xFFB6C1 + " -> Color End 50% = " + ManipulateBrightness(0xFFB6C1, 0.5) + " -> Color End 0% = " + ManipulateBrightness(0xFFB6C1, 0.5) + " -> Color End 200% = " + ManipulateBrightness(0xFFB6C1, 2))
+  ; Debug.MessageBox("Color Start = " + 0xE6E0AD + " -> Color End 50% = " + ManipulateBrightness(0xE6E0AD, 0.5) + " -> Color End 0% = " + ManipulateBrightness(0xE6E0AD, 0.5) + " -> Color End 200% = " + ManipulateBrightness(0xE6E0AD, 2))
   ; Mod Events
   RegisterForModEvent("dhlp-Suspend", "SuspendMod")
   RegisterForModEvent("dhlp-Resume", "ResumeMod")
@@ -87,6 +123,7 @@ Event OnKeyDown(int keyCode)
   MCM.bPaused = !MCM.bPaused
   If(MCM.bPaused)
     Debug.Notification("ScRappies Matchmaker paused")
+    UnregisterForUpdate()
   Else
     Debug.Notification("ScRappies Matchmaker enabled")
     RegisterForSingleUpdate(MCM.iTickInterval)

@@ -2,11 +2,11 @@ Scriptname SMMAnimFrame Hidden
 
 
 bool Function hasCreatures(Actor that, Actor[] them) global
-  Keyword atNPC = Keyword.GetKeyword("ActorTypeNPC")
-  If(!that.HasKeyword(atNPC))
+  Keyword ActorTypeNPC = Keyword.GetKeyword("ActorTypeNPC")
+  If(that.HasKeyword(ActorTypeNPC))
     int i = 0
     While(i < them.length)
-      If(them[i].HasKeyword(atNPC))
+      If(!them[i].HasKeyword(ActorTypeNPC))
         return true
       EndIf
       i += 1
@@ -41,7 +41,7 @@ int Function StartAnimationSingle(SMMMCM MCM, Actor that, String hook = "") glob
     sol = 1
   EndIf
   return sol
-EndFunction
+EndFunction 
 
 int Function StartAnimation(SMMMCM MCM, Actor victim, Actor[] them, int asVictim = 1, String hook = "") global
   int sol = -1
