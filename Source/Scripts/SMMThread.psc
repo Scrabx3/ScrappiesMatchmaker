@@ -7,7 +7,7 @@ Scene Property MyScene Auto
 Spell Property GatherSurroundingActors Auto
 ; NOTE: Alias with ID 0 is considered the Initiator; Alias with ID 1+ are Partners
 int Property consent Auto Conditional Hidden
-int jCd
+int jCooldown
 int jActors
 int jProfile
 Actor init
@@ -15,20 +15,20 @@ Actor[] partners
 ; NOTE: partners includes a Set of Actors which participated in the previous Animation. They are also always an Alias in this Thread
 ; After an Animation ended there will be a quick Check if a Partner should stay interested, otherwise they are sorted out of the Array and Quest
 ; New Actors may be added to the Quest during an Animation and will be added to this Partners Array if possible
-String filePathCooldown = "Data\\SKSE\\SMM\\Definition\\Cooldowns.json"
+String Property filePathCooldown = "Data\\SKSE\\SMM\\Definition\\Cooldowns.json" AutoReadOnly Hidden
 
 ; =========================================================================
 ; ============================================ START UP
 ; ========================================================================
 Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRef1, ObjectReference akRef2, int aiValue1, int aiValue2)
-  jCd = JValue.retain(JValue.readFromFile(filePathCooldown))
+  jCooldown = JValue.retain(JValue.readFromFile(filePathCooldown))
   init = akRef1 as Actor
   jActors = aiValue1
   jProfile = JValue.retain(aiValue2)
   consent = JMap.getInt(jProfile, "bConsent")
-  Debug.Trace("[SMM] Started Thread. ID: " + Self + " | Initiator: " + init + "| Name: " + init.GetLeveledActorBase().GetName())
+  Debug.Trace("[SMM] <Thread> ID: " + Self + " | Initiator = " + init)
+  ; Collect the Actors to start the Scene with
   If(jActors != 0)
-    ; Fill Aliases
     Form[] jActorForms = JArray.asFormArray(jActors)
     ; Form[] jActorForms = SMMMCM.asJFormArray(jActors)
     partners = PapyrusUtil.ActorArray(jActorForms.Length)
@@ -105,7 +105,7 @@ Function StartScene()
     partners = PapyrusUtil.RemoveActor(them, none)
     StartAnimation()
   EndIf
-  StorageUtil.SetFormValue(init, "SMMThread", Self)
+  StorageUtil.SetFormValue(init, "SMMThread", self)
   init.AddSpell(GatherSurroundingActors, false)
 EndFunction
 
@@ -151,7 +151,7 @@ Function PostScene(int ID)
     int n = 0
     While(n < partners.Length)
       If(Utility.RandomFloat(0, 99.9) >= MCM.fResNextRoundChance)
-        JMap.setFlt(jCd, partners[n].GetFormID(), Scan.GameDaysPassed.Value)
+        JMap.setFlt(jCooldown, partners[n].GetFormID(), Scan.GameDaysPassed.Value)
         ClearActor(partners[n])
         partners[n] = none
       EndIf
@@ -160,11 +160,12 @@ Function PostScene(int ID)
     ; Update Partner Array
     int maxPartners = Scan.GetNumPartners(4)
     If(maxPartners != partners.Length)
+      ; If we got more Partners than currently allowed, remove the ones too much
       If(maxPartners < partners.Length)
         int i = partners.Length
         While(i > maxPartners)
           i -= 1
-          JMap.setFlt(jCd, partners[i].GetFormID(), Scan.GameDaysPassed.Value)
+          JMap.setFlt(jCooldown, partners[i].GetFormID(), Scan.GameDaysPassed.Value)
         EndWhile
       EndIf
       partners = PapyrusUtil.ResizeActorArray(partners, maxPartners)
@@ -235,14 +236,14 @@ Function CleanUp()
   EndIf
   init.RemoveSpell(GatherSurroundingActors)
   StorageUtil.SetFormValue(init, "Thread", none)
-  JMap.setFlt(jCd, init.GetFormID(), Scan.GameDaysPassed.Value)
+  JMap.setFlt(jCooldown, init.GetFormID(), Scan.GameDaysPassed.Value)
   int i = 0
   While(i < partners.Length)
-    JMap.setFlt(jCd, partners[i].GetFormID(), Scan.GameDaysPassed.Value)
+    JMap.setFlt(jCooldown, partners[i].GetFormID(), Scan.GameDaysPassed.Value)
     i += 1
   EndWhile
-  JValue.writeToFile(jCd, filePathCooldown)
-  jCd = JValue.release(jCd)
+  JValue.writeToFile(jCooldown, filePathCooldown)
+  jCooldown = JValue.release(jCooldown)
   jActors = JValue.release(jActors)
   jProfile = JValue.release(jProfile)
 EndFunction

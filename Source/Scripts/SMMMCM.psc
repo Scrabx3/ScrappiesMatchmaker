@@ -11,6 +11,7 @@ int Property iTickInterval = 20 Auto Hidden
 bool Property bLocationScan = true Auto Hidden
 GlobalVariable Property gScanRadius Auto
 int Property iMaxScenes = 1 Auto Hidden
+GlobalVariable Property gAllowElders Auto
 ; Definitions
 float Property fDuskTime = 19.00 Auto Hidden
 float Property fDawnTime = 5.00 Auto Hidden
@@ -212,6 +213,7 @@ Event OnPageReset(string Page)
     AddToggleOptionST("LocScan", "$SMM_LocScan", bLocationScan)
     AddSliderOptionST("ScanRadius", "$SMM_ScanRadius", gScanRadius.Value/70, "{0}m")
     AddSliderOptionST("ScenesPerScan", "$SMM_ScenesPerScan", iMaxScenes, "{0}")
+    AddToggleOptionST("AllowElder", "$SMM_AllowElders", gAllowElders.Value)    
     SetCursorPosition(1)
     AddHeaderOption("$SMM_Definitions")
     AddSliderOptionST("DefDuskTime", "$SMM_DuskTime", fDuskTime, "{1}0")
@@ -466,6 +468,9 @@ Event OnSelectST()
   If(option[0] == "LocScan") ; General
     bLocationScan = !bLocationScan
     SetToggleOptionValueST(bLocationScan)
+  ElseIf(option[0] == "AllowElders")
+    gAllowElders.Value = Math.abs(gAllowElders.Value - 1)
+    SetToggleOptionValueST(gAllowElders.Value)
 
   ElseIf(option[0] == "shutdownThreads") ; General/Debug
     Quest.GetQuest("SMM_ThreadPlayer").Stop()
@@ -1031,6 +1036,8 @@ Event OnHighlightST()
     SetInfoText("$SMM_DuskTimeHighlight")
   ElseIf(option[0] == "DefDawnTime")
     SetInfoText("$SMM_DawnTimeHighlight")
+  ElseIf(option[0] == "AllowElders")
+    SetInfoText("$SMM_AllowEldersHighlight")
 
   ElseIf(option[0] == "shutdownThreads") ; General/Debug
     SetInfoText("$SMM_ShutDownHighlight")

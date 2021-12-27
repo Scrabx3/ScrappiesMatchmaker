@@ -42,38 +42,6 @@ Keyword Property LocTypeWerewolfLair Auto
 ; --------------- Variables
 String locProfile = "$SMM_Disabled"
 
-; NOTE: TEST
-; Simple Brightness Manipulation. manipulateBy is a % how much brighter the Color should be
-; E.g. passing 0.5 causes the Color to be 50% as bright (half as bright)
-int Function ManipulateBrightness(int color, float manipulateBy)
-	int r = (Math.LogicalAnd(Math.RightShift(color, 18), 255) * manipulateBy) as int
-	int g = (Math.LogicalAnd(Math.RightShift(color, 8), 255) * manipulateBy) as int
-	int b = (Math.LogicalAnd(color, 255) * manipulateBy) as int
-	If(r > 255)
-		r = 255
-	EndIf
-	If(g > 255)
-		g = 255
-	EndIf
-	If(b > 255)
-		b = 255
-	EndIf
-	return (ConvertToHex(r) + ConvertToHex(g) + ConvertToHex(b)) as int
-EndFunction
-String Function ConvertToHex(int dec) ; Yes, I cant do colors :^)
-	String ret = ""
-	While (dec != 0)
-		int r = dec % 16
-		If(r < 10)
-			ret += r
-		Else
-			ret += StringUtil.Asord(55 + r)
-		EndIf
-		dec /= 16
-	EndWhile
-	return ret
-EndFunction
-
 ; =============================================================
 ; ===================================== START UP
 ; =============================================================
@@ -86,6 +54,7 @@ Event OnPlayerLoadGame()
     RegisterForSingleUpdate(MCM.iTickInterval)
   EndIf
   RegisterForKey(MCM.iPauseKey)
+
   ; Check Mods
  	If(Game.GetModByName("SexLab.esm") == 255)
     MCM.bSLAllowed = false
@@ -101,8 +70,10 @@ Event OnPlayerLoadGame()
   If(!MCM.bSLAllowed && !MCM.bOStimAllowed)
     Debug.MessageBox("ScRappies Matchmaker requires either SexLab Framework or OStim to be installed.")
   EndIf
+
   ; Reset Cooldowns
-  JValue.writeToFile(JValue.readFromFile("Data\\SKSE\\SMM\\Definition\\Blank.json"), "Data\\SKSE\\SMM\\Definition\\Cooldowns.json")
+  ; JValue.writeToFile(JValue.readFromFile("Data\\SKSE\\SMM\\Definition\\Blank.json"), "Data\\SKSE\\SMM\\Definition\\Cooldowns.json")
+
   ; Friend Faction
   int i = 0
   While(i < FriendList.GetSize())
@@ -110,11 +81,7 @@ Event OnPlayerLoadGame()
     tmpFac.SetAlly(FriendFaction, true, true)
     i += 1
   EndWhile
-  ; TEST
-  ; Debug.MessageBox("Color Start = " + 0xADD8E6 + " -> Color End 50% = " + ManipulateBrightness(0xADD8E6, 0.5) + " -> Color End 0% = " + ManipulateBrightness(0xADD8E6, 0.5) + " -> Color End 200% = " + ManipulateBrightness(0xADD8E6, 2))
-  ; Debug.MessageBox("Color Start = " + 0xFFB6C1 + " -> Color End 50% = " + ManipulateBrightness(0xFFB6C1, 0.5) + " -> Color End 0% = " + ManipulateBrightness(0xFFB6C1, 0.5) + " -> Color End 200% = " + ManipulateBrightness(0xFFB6C1, 2))
-  ; Debug.MessageBox("Color Start = " + 0xE6E0AD + " -> Color End 50% = " + ManipulateBrightness(0xE6E0AD, 0.5) + " -> Color End 0% = " + ManipulateBrightness(0xE6E0AD, 0.5) + " -> Color End 200% = " + ManipulateBrightness(0xE6E0AD, 2))
-  ; Mod Events
+
   RegisterForModEvent("dhlp-Suspend", "SuspendMod")
   RegisterForModEvent("dhlp-Resume", "ResumeMod")
 EndEvent
@@ -123,7 +90,6 @@ Event OnKeyDown(int keyCode)
   MCM.bPaused = !MCM.bPaused
   If(MCM.bPaused)
     Debug.Notification("ScRappies Matchmaker paused")
-    UnregisterForUpdate()
   Else
     Debug.Notification("ScRappies Matchmaker enabled")
     RegisterForSingleUpdate(MCM.iTickInterval)
@@ -138,42 +104,34 @@ EndFunction
 ; =============================================================
 ; ===================================== CYCLE
 ; =============================================================
-
 Event OnUpdate()
   ; Debug.Notification("<SMM> Scanning with Profile: { " + locProfile + " }")
-  If(MCM.bPaused)
+  If(MCM.bPaused || locProfile == "$SMM_Disabled")
+    Debug.Trace("[SMM] <Player> Mod Paused or Location disabled")
+    return
+  ElseIf(UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
+    Debug.Trace("[SMM] <Player> Player in Menu")
     return
   EndIf
-  If(locProfile == "$SMM_Disabled")
-    Debug.Trace("[SMM] <Player> <Update> Invalid Profile")
-  ElseIf(DoScan() == false)
-    Debug.Trace("[SMM] <Player> <Update> DoScan returned false")
-  Else
-    int jProfile = JValue.readFromFile("Data\\SKSE\\SMM\\" + locProfile + ".json")
-    If(Utility.RandomFloat(0, 99.9) >= JMap.getInt(jProfile, "fEngageChance"))
-      Debug.Trace("[SMM] <Player> Poor RNG, skipping")
-    ElseIf(JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat())
-      Debug.Trace("[SMM] <Player> Player in Combat, skipping")
-    ElseIf(JMap.getFlt(jProfile, "fEngageTimeMin") > GameHour.Value || JMap.getFlt(jProfile, "fEngageTimeMax") < GameHour.Value)
-      Debug.Trace("[SMM] <Player> Invalid Time, skipping")
-    EndIf
-    If(ScanThread.SendStoryEventAndWait(aiValue1 = jProfile))
-      UnregisterForUpdate()
-      Debug.Trace("[SMM] <Player> Checking Engagement")
-      return
-    EndIf
+  ; Get Profile for the current Location
+  Debug.Trace("[SMM] <Player> OnUpdate with Profile: " + locProfile)
+  int jProfile = JValue.readFromFile("Data\\SKSE\\SMM\\" + locProfile + ".json")
+  float gh = GameHour.Value
+  If(Utility.RandomFloat(0, 99.9) >= JMap.getInt(jProfile, "fEngageChance") || JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat() || JMap.getFlt(jProfile, "fEngageTimeMin") > gh || JMap.getFlt(jProfile, "fEngageTimeMax") < gh)
+    Debug.Trace("[SMM] <Player> Invalid System Checks")
+    return
   EndIf
-  RegisterForSingleUpdate(MCM.iTickInterval)
+  ; Base checks done, Scan for near NPC & hand over to Thread, otherwise register for next Poll
+  If(ScanThread.SendStoryEventAndWait(aiValue1 = jProfile))
+    Debug.Trace("[SMM] <Player> Checking Engagement")
+  Else
+    RegisterForSingleUpdate(MCM.iTickInterval)
+  EndIf
 EndEvent
-
-bool Function DoScan()
-  return !(UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
-EndFunction
 
 ; =============================================================
 ; ===================================== LOCATION
 ; =============================================================
-
 ; Update the Profile for this Location. Index for Location in Translation Files
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)
   If(akOldLoc == akNewLoc)
@@ -249,7 +207,6 @@ Event OnLocationChange(Location akOldLoc, Location akNewLoc)
     OnUpdate()
   EndIf
 EndEvent
-
 
 Event SuspendMod(string asEventName, string asStringArg, float afNumArg, form akSender)
   MCM.bPaused = true

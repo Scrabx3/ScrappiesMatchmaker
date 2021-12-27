@@ -17,6 +17,9 @@ EndEvent
 
 Event OnCombatStateChanged(Actor akTarget, int aeCombatState)
   If(aeCombatState == 1)
+    If(MCM.bSLAllowed)
+      SMMSexLab.stopAnimation(GetReference() as Actor) > -1
+    EndIf
     GetOwningQuest().Stop()
   EndIf
 EndEvent

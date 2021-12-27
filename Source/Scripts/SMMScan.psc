@@ -53,7 +53,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   ; Create Scene. ColAct[] always only lists Actors that arent matched yet
   Actor[] ColAct = GetActors()
   If(!colAct.Length)
-    Debug.Trace("[SMM] <Scan> No Actors found to animate")
+    Debug.Trace("[SMM] <Scan> No Actors found to match")
     Stop()
     return
   EndIf
@@ -490,33 +490,33 @@ Actor[] Function GetActors()
   int i = 0
   While(i < aliases.length)
     Actor tmp = (aliases[i] as ReferenceAlias).GetReference() as Actor
-    bool accept = false
-    If(!tmp)
-      ;
-    ElseIf(JMap.hasKey(jCooldowns, tmp.GetFormID()) && JMap.getFlt(jCooldowns, tmp.GetFormID()) > GameDaysPassed.Value + (JMap.getFlt(jProfile, "fEngageCooldown", 1) * 1/24))
-      ;
-    ElseIf(tmp.IsInFaction(PlayerFollowerFaction) || tmp.IsPlayerTeammate())
-      accept = JMap.getInt(jProfile, "bConsiderFollowers")
-    ElseIf(!IsValidRace(tmp))
-      ;
-    Else
-      int cC = JMap.getInt(jProfile, "lConsiderCreature")
-      bool npc = tmp.HasKeyword(ActorTypeNPC)
-      If(cC == 0 || (cC == 1 && npc) || (cC == 2 && !npc))
-        int cH = JMap.getInt(jProfile, "lConsider")
-        bool hostile = tmp.IsHostileToActor(PlayerRef)
-        If(cH == 0 || (cH == 1 && !hostile) || (cH == 2 && hostile))
-          accept = true
+    If(tmp != none)
+      bool accept = false
+      String ID = tmp.GetFormID() as String
+      If(JMap.getFlt(jCooldowns, tmp.GetFormID()) + (JMap.getFlt(jProfile, "fEngageCooldown") / 24) > GameDaysPassed.Value)
+        ;
+      ElseIf(!IsValidRace(tmp))
+        ;
+      ElseIf(tmp.IsInFaction(PlayerFollowerFaction) || tmp.IsPlayerTeammate())
+        accept = JMap.getInt(jProfile, "bConsiderFollowers")
+      Else
+        int cC = JMap.getInt(jProfile, "lConsiderCreature")
+        bool npc = tmp.HasKeyword(ActorTypeNPC)
+        If(cC == 0 || (cC == 1 && npc) || (cC == 2 && !npc))
+          int cH = JMap.getInt(jProfile, "lConsider")
+          bool hostile = tmp.IsHostileToActor(PlayerRef)
+          If(cH == 0 || (cH == 1 && !hostile) || (cH == 2 && hostile))
+            accept = true
+          EndIf
         EndIf
       EndIf
-    EndIf
-    If(accept)
-      ret[i] = tmp
+      If(accept)
+        ret[i] = tmp
+      EndIf
     EndIf
     i += 1
   EndWhile
-  ret = PapyrusUtil.RemoveActor(ret, none)
-  return ret
+  return PapyrusUtil.RemoveActor(ret, none)
 EndFunction
 
 Function Stop()

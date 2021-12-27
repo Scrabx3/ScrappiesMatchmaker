@@ -25,7 +25,7 @@ int Function stopAnimation(Actor that) Global
   SexLabFramework SL = Quest.GetQuest("SexLabQuestFramework") as SexLabFramework
   int sol = SL.FindActorController(that)
   If(sol != -1)
-    SL.GetController(sol).EndAnimation()
+    SL.GetController(sol).EndAnimation(true)
   EndIf
   return sol
 EndFunction
