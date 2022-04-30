@@ -8,10 +8,8 @@ String[] classColors
 bool Property bPaused = true Auto Hidden
 int Property iPauseKey = -1 Auto Hidden
 int Property iTickInterval = 20 Auto Hidden
-bool Property bLocationScan = true Auto Hidden
 GlobalVariable Property gScanRadius Auto
 int Property iMaxScenes = 1 Auto Hidden
-GlobalVariable Property gAllowElders Auto
 ; Definitions
 float Property fDuskTime = 19.00 Auto Hidden
 float Property fDawnTime = 5.00 Auto Hidden
@@ -63,11 +61,7 @@ float Property fOtMaxD = 45.0 Auto Hidden
 ; 3p+ Weights
 float Property fAFMasturbateFol = 0.0 Auto Hidden
 float Property fAFMasturbateNPC = 10.0 Auto Hidden
-float Property fAFMasturbateCrt = 0.0 Auto Hidden
-int Property iAF2some = 70 Auto Hidden
-int Property iAF3some = 50 Auto Hidden
-int Property iAF4some = 40 Auto Hidden
-int Property iAF5Some = 30 Auto Hidden
+int[] Property iSceneTypeWeight Auto Hidden
 ; Utility
 bool Property FrameCreature
 	bool Function Get()
@@ -94,20 +88,6 @@ bool[] Property bValidRace Auto Hidden
 ; ===============================================================
 int Function GetVersion()
   return 1
-EndFunction
-
-int[] Function getXsomeWeight()
-  int[] sol
-  If(bSLAllowed)
-    sol = new int[4]
-    sol[2] = iAF4some
-    sol[3] = iAF5Some
-  else
-    sol = new int[2]
-  EndIf
-  sol[0] = iAF2some
-  sol[1] = iAF3some
-  return sol
 EndFunction
 
 Event OnVersionUpdate(int newVers)
@@ -191,6 +171,11 @@ Function Initialize()
 
   SLTags = new String[11]
   bValidRace = new bool[52]
+  iSceneTypeWeight = new int[4]
+  iSceneTypeWeight[0] = 75 
+  iSceneTypeWeight[1] = 60
+  iSceneTypeWeight[2] = 35
+  iSceneTypeWeight[3] = 20
 EndFunction
 
 ; ===============================================================
@@ -210,10 +195,8 @@ Event OnPageReset(string Page)
     AddToggleOptionST("Enabled", "$SMM_Enabled", !bPaused)
     AddKeyMapOptionST("PauseKey", "$SMM_PauseHotkey", iPauseKey)
     AddSliderOptionST("TickInterval", "$SMM_Interval", iTickInterval, "{0}s")
-    AddToggleOptionST("LocScan", "$SMM_LocScan", bLocationScan)
     AddSliderOptionST("ScanRadius", "$SMM_ScanRadius", gScanRadius.Value/70, "{0}m")
     AddSliderOptionST("ScenesPerScan", "$SMM_ScenesPerScan", iMaxScenes, "{0}")
-    AddToggleOptionST("AllowElder", "$SMM_AllowElders", gAllowElders.Value)    
     SetCursorPosition(1)
     AddHeaderOption("$SMM_Definitions")
     AddSliderOptionST("DefDuskTime", "$SMM_DuskTime", fDuskTime, "{1}0")
@@ -299,8 +282,7 @@ Event OnPageReset(string Page)
     i = 0
     If(aca == 2) ; Points
       AddSliderOptionST("ReqPointsBase", classColors[3] + "$SMM_ReqPoints</color>", JMap.getInt(jProfile, "iReqPoints"), "{0}")
-      int[] c = JArray.asIntArray(JMap.getObj(jProfile, "reqAPoints"))
-      ; int[] c = asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
+      int[] c = asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
       While(i < c.Length)
         AddMenuOptionST("reqPoints_" + i, "$SMM_AdvCon_" + i, lReqList[c[i]])
         If(i == 6)
@@ -311,8 +293,7 @@ Event OnPageReset(string Page)
       EndWhile
     Else ; Chance (or none)
       AddSliderOptionST("chanceBase", classColors[3] + "$SMM_BaseChance", JMap.getInt(jProfile, "cBaseChance"), "{1}%", getFlag(aca == 1))
-      int[] c = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
-      ; int[] c = asJIntArray(JMap.getObj(jProfile, "cAChances"))
+      int[] c = asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
       While(i < c.Length)
         AddSliderOptionST("aChances_" + i, "$SMM_AdvCon_" + i, c[i], "{1}%", getFlag(aca == 1))
         If(i == 6)
@@ -372,9 +353,6 @@ Event OnPageReset(string Page)
 		AddEmptyOption()
 		AddHeaderOption("$SMM_afThreads")
 		AddToggleOptionST("afNotify", "$SMM_afAssaultNotify", bNotifyAF)
-    ; No Po3 Papyrus Extender no Colored Options & I dont wanna make it a dependency for one minor Feature like this
-		; AddToggleOptionST("afNotifyColor", "$SMM_afAssaultNotifyColor", bNotifyColorAF, GetFlag(bNotifyAF))
-		; AddColorOptionST("afNotifyColorChoice", "$SMM_afAssaultNofityColorChoice", iNotifyColorAF, GetFlag(bNotifyAF && bNotifyColorAF))
 		; ===============================================
 		SetCursorPosition(1)
 		AddHeaderOption("$SMM_afFrameSexLab")
@@ -399,11 +377,12 @@ Event OnPageReset(string Page)
 		AddHeaderOption("")
 		AddSliderOptionST("af1pWeightFol", "$SMM_af1pWeightFol", fAFMasturbateFol, "{0}%")
 		AddSliderOptionST("af1pWeightNPC", "$SMM_af1pWeightNPC", fAFMasturbateNPC, "{0}%")
-		AddSliderOptionST("af1pWeightCrt", "$SMM_af1pWeightCrt", fAFMasturbateCrt, "{0}%")
-		AddSliderOptionST("af2pWeight", "$SMM_af2pWeight", iAF2some, "{0}")
-		AddSliderOptionST("af3pWeight", "$SMM_af3pWeight", iAF3some, "{0}")
-		AddSliderOptionST("af4pWeight", "$SMM_af4pWeight", iAF4some, "{0}", getFlag(SLThere))
-		AddSliderOptionST("af5pWeight", "$SMM_af5pWeight", iAF5Some, "{0}", getFlag(SLThere))
+    AddHeaderOption("$SMM_SceneTypes")
+    int n = 0
+    While(n < iSceneTypeWeight.Length)
+      AddSliderOptionST("scenetype_" + n, "$SMM_SceneType_" + n, iSceneTypeWeight[n], "{0}", getFlag(SLThere || OStimThere))
+      n += 1
+    EndWhile
 
   ElseIf(Page == "$SMM_Filter")
     int i = 0
@@ -465,14 +444,7 @@ EndEvent
 ; ===============================================================
 Event OnSelectST()
   String[] option = PapyrusUtil.StringSplit(GetState(), "_")
-  If(option[0] == "LocScan") ; General
-    bLocationScan = !bLocationScan
-    SetToggleOptionValueST(bLocationScan)
-  ElseIf(option[0] == "AllowElders")
-    gAllowElders.Value = Math.abs(gAllowElders.Value - 1)
-    SetToggleOptionValueST(gAllowElders.Value)
-
-  ElseIf(option[0] == "shutdownThreads") ; General/Debug
+  If(option[0] == "shutdownThreads") ; General/Debug
     Quest.GetQuest("SMM_ThreadPlayer").Stop()
     int i = 0
     While(i < 10)
@@ -684,8 +656,7 @@ Event OnSliderOpenST()
     SetSliderDialogInterval(1)
   ElseIf(option[0] == "aChances")
     int i = option[1] as int
-    int[] c = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
-    ; int[] c = asJIntArray(JMap.getObj(jProfile, "cAChances"))
+    int[] c = asJIntArray(JMap.getObj(jProfile, "cAChances"))
     SetSliderDialogStartValue(c[i])
     SetSliderDialogDefaultValue(0)
     SetSliderDialogRange(-100, 100)
@@ -748,26 +719,12 @@ Event OnSliderOpenST()
 		SetSliderDialogDefaultValue(45)
 		SetSliderDialogRange(fOtMinD, 180)
 		SetSliderDialogInterval(5)
-	ElseIf(option[0] == "af2pWeight")
-		SetSliderDialogStartValue(iAF2some)
-		SetSliderDialogDefaultValue(70)
-		SetSliderDialogRange(0, 100)
-		SetSliderDialogInterval(1)
-	ElseIf(option[0] == "af3pWeight")
-		SetSliderDialogStartValue(iAF3some)
+	ElseIf(option[0] == "scenetype")
+    int i = option[1] as int
+		SetSliderDialogStartValue(iSceneTypeWeight[i])
 		SetSliderDialogDefaultValue(50)
 		SetSliderDialogRange(0, 100)
-		SetSliderDialogInterval(1)
-	ElseIf(option[0] == "af4pWeight")
-		SetSliderDialogStartValue(iAF4some)
-		SetSliderDialogDefaultValue(40)
-		SetSliderDialogRange(0, 100)
-		SetSliderDialogInterval(1)
-	ElseIf(option[0] == "af5pWeight")
-		SetSliderDialogStartValue(iAF5Some)
-		SetSliderDialogDefaultValue(30)
-		SetSliderDialogRange(0, 100)
-		SetSliderDialogInterval(1)
+		SetSliderDialogInterval(1)   
 	ElseIf(option[0] == "af1pWeightFol")
 		SetSliderDialogStartValue(fAFMasturbateFol)
 		SetSliderDialogDefaultValue(0)
@@ -776,11 +733,6 @@ Event OnSliderOpenST()
 	ElseIf(option[0] == "af1pWeightNPC")
 		SetSliderDialogStartValue(fAFMasturbateNPC)
 		SetSliderDialogDefaultValue(15)
-		SetSliderDialogRange(0, 100)
-		SetSliderDialogInterval(0.5)
-	ElseIf(option[0] == "af1pWeightCrt")
-		SetSliderDialogStartValue(fAFMasturbateCrt)
-		SetSliderDialogDefaultValue(0)
 		SetSliderDialogRange(0, 100)
 		SetSliderDialogInterval(0.5)
   EndIf
@@ -896,21 +848,10 @@ Event OnSliderAcceptST(Float afValue)
 	ElseIf(option[0] == "af1pWeightNPC")
 		fAFMasturbateNPC = afValue
 		SetSliderOptionValueST(fAFMasturbateNPC, "{1}%")
-	ElseIf(option[0] == "af1pWeightCrt")
-		fAFMasturbateCrt = afValue
-		SetSliderOptionValueST(fAFMasturbateCrt, "{1}%")
-	ElseIf(option[0] == "af2pWeight")
-		iAF2some = afValue as int
-		SetSliderOptionValueST(iAF2some)
-	ElseIf(option[0] == "af3pWeight")
-		iAF3some = afValue as int
-		SetSliderOptionValueST(iAF3some)
-	ElseIf(option[0] == "af4pWeight")
-		iAF4some = afValue as int
-		SetSliderOptionValueST(iAF4some)
-	ElseIf(option[0] == "af5pWeight")
-		iAF5Some = afValue as int
-		SetSliderOptionValueST(iAF5Some)
+	ElseIf(option[0] == "scenetype")
+    int i = option[1] as int
+		iSceneTypeWeight[i] = afValue as int
+		SetSliderOptionValueST(iSceneTypeWeight[i], "{1}")
   EndIf
 EndEvent
 
@@ -1036,8 +977,6 @@ Event OnHighlightST()
     SetInfoText("$SMM_DuskTimeHighlight")
   ElseIf(option[0] == "DefDawnTime")
     SetInfoText("$SMM_DawnTimeHighlight")
-  ElseIf(option[0] == "AllowElders")
-    SetInfoText("$SMM_AllowEldersHighlight")
 
   ElseIf(option[0] == "shutdownThreads") ; General/Debug
     SetInfoText("$SMM_ShutDownHighlight")
@@ -1268,34 +1207,11 @@ State afNotify
 	Event OnSelectST()
 		bNotifyAF = !bNotifyAF
 		SetToggleOptionValueST(bNotifyAF)
-		; If(bNotifyAF)
-		; 	If(bNotifyColorAF)
-		; 		SetOptionFlagsST(OPTION_FLAG_NONE, true, "afNotifyColorChoice")
-		; 	EndIf
-		; 	SetOptionFlagsST(OPTION_FLAG_NONE, false, "afNotifyColor")
-		; else
-		; 	If(bNotifyColorAF)
-		; 		SetOptionFlagsST(OPTION_FLAG_DISABLED, true, "afNotifyColorChoice")
-		; 	EndIf
-		; 	SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "afNotifyColor")
-		; EndIf
 	EndEvent
 	Event OnHighlightST()
 		SetInfoText("$Yam_afAssaultNotifyHighlight")
 	EndEvent
 EndState
-
-; State afNotifyColorChoice
-; 	Event OnColorOpenST()
-; 		SetColorDialogStartColor(iNotifyColorAF)
-; 		SetColorDialogDefaultColor(0x0000FF)
-; 	EndEvent
-; 	Event OnColorAcceptST(int color)
-; 		iNotifyColorAF = color
-; 		SetColorOptionValueST(iNotifyColorAF)
-; 		sNotifyColorAF = IntToString(iNotifyColorAF)
-; 	EndEvent
-; EndState
 
 ; =============================================================
 ; ===================================== MISC UTILITY

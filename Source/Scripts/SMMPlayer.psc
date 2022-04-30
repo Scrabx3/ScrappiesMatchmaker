@@ -63,9 +63,9 @@ Event OnPlayerLoadGame()
   EndIf
 	If(Game.GetModByName("OStim.esp") == 255)
     MCM.bOStimAllowed = false
-  ElseIf(SMMOstim.GetVersion() < 26)
+  ElseIf(SMMAnimationOStim.GetVersion() < 26)
     MCM.bOStimAllowed = false
-    Debug.MessageBox("ScRappies Matchmaker requires OStim API Version 26 or higher. Your Version is: " + SMMOstim.GetVersion())
+    Debug.MessageBox("ScRappies Matchmaker requires OStim API Version 26 or higher. Your Version is: " + SMMAnimationOStim.GetVersion())
   EndIf
   If(!MCM.bSLAllowed && !MCM.bOStimAllowed)
     Debug.MessageBox("ScRappies Matchmaker requires either SexLab Framework or OStim to be installed.")
@@ -203,9 +203,6 @@ Event OnLocationChange(Location akOldLoc, Location akNewLoc)
   EndIf
   Debug.Trace("[SMM] Changed Location <Index " + p + " >")
   locProfile = MCM.lProfiles[p]
-  If(MCM.bLocationScan)
-    OnUpdate()
-  EndIf
 EndEvent
 
 Event SuspendMod(string asEventName, string asStringArg, float afNumArg, form akSender)

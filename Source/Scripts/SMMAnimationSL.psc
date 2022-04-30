@@ -1,38 +1,5 @@
-Scriptname SMMSexLab Hidden
+Scriptname SMMAnimationSL Hidden
 
-int Function getActorType(Actor me) global
-  int mySLGender = SexLabUtil.GetAPI().GetGender(me)
-  If(mySLGender == 3) ;Female Creature
-    return 4
-  ElseIf(mySLGender == 2) ;Male Creature
-    return 3
-  Else ;Humanoid
-    int myVanillaGender = me.GetLeveledActorBase().GetSex()
-    If(myVanillaGender == mySLGender) ;Either male or female
-      return myVanillaGender
-    Else ;Futa
-      return 2
-    EndIf
-  EndIf
-EndFunction
-
-int Function GetArousal(Actor that) global
-  slaFrameworkScr SLA = Quest.GetQuest("sla_Framework") as slaFrameworkScr
-  return SLA.GetActorArousal(that)
-EndFunction
-
-int Function stopAnimation(Actor that) Global
-  SexLabFramework SL = Quest.GetQuest("SexLabQuestFramework") as SexLabFramework
-  int sol = SL.FindActorController(that)
-  If(sol != -1)
-    SL.GetController(sol).EndAnimation(true)
-  EndIf
-  return sol
-EndFunction
-
-; ======================================================================
-; ================================== ANIMATION
-; ======================================================================
 Function StartSceneSingle(Actor that, String hook) global
   SexLabUtil.QuickStart(that, hook = hook)
 EndFunction
@@ -83,4 +50,47 @@ int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] partners, int asVic
 	EndWhile
   ; Start Scene
   return SL.StartSex(others, anims, victim, hook = hook)
+EndFunction
+
+
+int Function GetActorType(Actor subject) global
+  SexLabFramework SL = SexLabUtil.GetAPI()
+  int sex = SL.GetGender(subject)
+  If (sex > 2)
+    sex += 1
+  ElseIf (sex == 2)
+    If(Game.GetModByName("Schlongs of Skyrim.esp") != 255)
+      Faction schlongified = Game.GetFormFromFile(0x00AFF8, "Schlongs of Skyrim.esp") as Faction
+      sex += subject.IsInFaction(schlongified) as int
+    EndIf
+  EndIf
+  return sex
+EndFunction
+
+int Function GetArousal(Actor that) global
+  slaFrameworkScr SLA = Quest.GetQuest("sla_Framework") as slaFrameworkScr
+  return SLA.GetActorArousal(that)
+EndFunction
+
+bool Function IsAnimating(Actor subject) global
+  SexLabFramework SL = SexLabUtil.GetAPI()
+  return SL.FindActorController(subject) > -1
+EndFunction
+
+bool Function StopAnimating(Actor subject, int tid = -1) global
+  SexLabFramework SL = SexLabUtil.GetAPI()
+  if (tid == -1)
+    tid = SL.FindActorController(subject)
+    if (tid == -1)
+      Debug.Trace("[SMM] Actor = " + subject + " is not part of any SL Animation.")
+      return false
+    endif
+  endif
+  sslThreadController controller = SL.GetController(tid)
+  if (!controller)
+    Debug.Trace("[SMM] Actor = " + subject + " is not part of any SL Animation.")
+    return false
+  endif
+  controller.EndAnimation()
+  return true
 EndFunction

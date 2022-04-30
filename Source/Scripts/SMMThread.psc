@@ -26,7 +26,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   jActors = aiValue1
   jProfile = JValue.retain(aiValue2)
   consent = JMap.getInt(jProfile, "bConsent")
-  Debug.Trace("[SMM] <Thread> ID: " + Self + " | Initiator = " + init)
+  Debug.Trace("[SMM] <Thread> ID: " + self + " | Initiator = " + init)
   ; Collect the Actors to start the Scene with
   If(jActors != 0)
     Form[] jActorForms = JArray.asFormArray(jActors)
@@ -84,15 +84,13 @@ Function StartScene()
   RegisterForModEvent("HookAnimationEnd_" + hook, "AfterSceneSL")
   RegisterForModEvent("ostim_end", "AfterSceneOStim")
   scenesPlayed = 1
-  If(jActors == 0) ; Empty Array, 1p Scene
-    int s = SMMAnimFrame.StartAnimationSingle(MCM, init, hook)
-    String initName = init.GetLeveledActorBase().GetName()
-    If(s == -1)
-      Debug.Trace("[SMM] " + Self + " Failed to start 1p Animation | Initiator: " + init + " | Name: " + initName)
+  If(jActors == 0 || JArray.count(jActors) == 0) ; Empty Array, 1p Scene
+    If(SMMAnimation.StartAnimationSingle(MCM, init, hook) == -1)
+      Debug.Trace("[SMM] " + self + " Failed to start 1p Animation | Initiator = " + init)
       Stop()
       return
     EndIf
-    Debug.Trace("[SMM] " + Self + " Successfully started 1p Animation | Initiator: " + init + " | Name: " + initName)
+    Debug.Trace("[SMM] " + self + " Successfully started 1p Animation | Initiator = " + init)
   Else ; 2p+ Scene
     Actor[] them = PapyrusUtil.ActorArray(partners.Length)
     int i = 0
@@ -116,33 +114,29 @@ int scenesPlayed
 String hook
 
 Function StartAnimation()
-  String initName = init.GetLeveledActorBase().GetName()
-  int s = SMMAnimFrame.StartAnimation(MCM, init, partners, Math.abs(consent - 1) as int, hook)
-  If(s == -1)
-    Debug.Trace("[SMM] " + Self + " Failed to Start 2p+ Animation " + scenesPlayed + " | Initiator: " + init + " | Name: " + initName)
+  If(SMMAnimation.StartAnimation(MCM, init, partners, Math.abs(consent - 1) as int, hook) == -1)
+    Debug.Trace("[SMM] " + self + " Failed to Start 2p+ Animation " + scenesPlayed + " | Initiator: " + init)
     Stop()
     return
   EndIf
-  Debug.Trace("[SMM] " + Self + " Successfully started 2p+ Animation " + scenesPlayed + " | Initiator: " + init + " | Name: " + initName)
+  Debug.Trace("[SMM] " + self + " Successfully started 2p+ Animation " + scenesPlayed + " | Initiator: " + init)
 EndFunction
 Event AfterSceneSL(int tid, bool hasPlayer)
-  Debug.Trace("[SMM] " + Self + " Animation End (SL) on Thread ")
+  Debug.Trace("[SMM] " + self + " Animation End (SL)")
   PostScene(-2)
 EndEvent
 Event AfterSceneOStim(string asEventName, string asStringArg, float afNumArg, form akSender)
-  Debug.Trace("[SMM] " + Self + " Animation End (OStim) on Thread ")
+  Debug.Trace("[SMM] " + self + " Animation End (OStim)")
   PostScene(afNumArg as int)
 EndEvent
 Function PostScene(int ID)
   If(ID > -2)
-    If(SMMOstim.FindInit(init, ID) == false)
-      Debug.Trace("[SMM] " + Self + " Unrelated OStim End")
+    Actor[] positions = SMMAnimationOStim.GetPositions(ID)
+    If(positions.find(init) == -1)
       return
     EndIf
   EndIf
-  String initName = init.GetLeveledActorBase().GetName()
-  If(jActors == 0 || !playNextScene())
-    ; Only 1 1p Scene or max Multi Scenes reached
+  If(!playNextScene())
     SetStage(5)
   Else
     ; Start another Scene
@@ -158,7 +152,7 @@ Function PostScene(int ID)
       n += 1
     EndWhile
     ; Update Partner Array
-    int maxPartners = Scan.GetNumPartners(4)
+    int maxPartners = SMMAnimation.GetAllowedParticipants(5)
     If(maxPartners != partners.Length)
       ; If we got more Partners than currently allowed, remove the ones too much
       If(maxPartners < partners.Length)

@@ -50,7 +50,7 @@ EndEvent
 
 Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRef1, ObjectReference akRef2, int aiValue1, int aiValue2)
   jProfile = JValue.retain(aiValue1)
-  ; Create Scene. ColAct[] always only lists Actors that arent matched yet
+  ; Get all actors collected by the initial Scan. Assume them to be valid for animation
   Actor[] ColAct = GetActors()
   If(!colAct.Length)
     Debug.Trace("[SMM] <Scan> No Actors found to match")
@@ -69,16 +69,12 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     EndIf
     Debug.Trace("[SMM] <Scan> Found Initiator: " + init)
     ; Figure out maximum Number of Partners
-    int numPartners = GetNumPartners(colAct.Length)
+    int numPartners = SMMAnimation.GetAllowedParticipants(colAct.Length + 1) - 1
     If(numPartners < 1)
       Debug.Trace("[SMM] <Scan> Invalid Number of Actors")
-      If(init != PlayerRef)
-        bool f = init.IsInFaction(PlayerFollowerFaction) || init.IsPlayerTeammate()
-        bool npc = init.HasKeyword(ActorTypeNPC)
-        bool fA = f && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateFol
-        bool npcA = !f && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateNPC
-        bool CrtA = !npc && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateCrt
-        If(npc && (fA || npcA) || crtA)
+      If(init != PlayerRef && init.HasKeyword(ActorTypeNPC))
+        bool isfollower = init.IsInFaction(PlayerFollowerFaction) || init.IsPlayerTeammate()
+        If(isfollower && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateFol || !isfollower && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateNPC)
           Debug.Trace("[SMM] <Scan> Attempt 1p Scene")
           ThreadKW.SendStoryEvent(akRef1 = init)
         EndIf
@@ -166,12 +162,11 @@ Actor Function GetInitiator(Actor[] them)
   EndWhile
   return none
 EndFunction
-
 bool Function ValidInitiator(Actor that)
   Debug.Trace("[SMM] Checking Initiator: " + that + " (" + that.GetLeveledActorBase().GetName() + ")")
   If(that != PlayerRef)
     ; ORomance check..
-    If(MCM.bOStimAllowed && JMap.getInt(jProfile, "bConsent") && SMMOStim.IsPlayerPartner(that))
+    If(MCM.bOStimAllowed && JMap.getInt(jProfile, "bConsent") && SMMAnimationOStim.IsPlayerPartner(that))
       return false
     EndIf
     bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
@@ -188,11 +183,9 @@ bool Function ValidInitiator(Actor that)
     int p = 0
     int[] v
     If(alg == 2)
-      v = JArray.asIntArray(JMap.getObj(jProfile, "ReqAPoints"))
-      ; v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
+      v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
     Else
-      v = JArray.asIntArray(JMap.getObj(jProfile, "cAChances"))
-      ; v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "cAChances"))
+      v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "cAChances"))
     EndIf    
     int i = 0
     While(i < v.Length)
@@ -230,7 +223,7 @@ bool Function AdvCon(Actor that, int i)
   ElseIf(i == 1)
     return IsThane(that)
   ElseIf(i == 2)
-    int arousal = GetArousal(that)
+    int arousal = SMMAnimation.GetArousal(that)
     bool aroused
     If(that == PlayerRef)
       aroused = arousal >= JMap.getInt(jprofile, "iArousalInitPl")
@@ -297,7 +290,7 @@ EndFunction
 ; =============================  PARTNER
 ; ===============================================================
 bool Function ValidPartner(Actor that, int jTmp)
-  If(MCM.bOStimAllowed && SMMOStim.IsPlayerPartner(that))
+  If(MCM.bOStimAllowed && SMMAnimationOStim.IsPlayerPartner(that))
     return false
   EndIf
   bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
@@ -306,7 +299,7 @@ bool Function ValidPartner(Actor that, int jTmp)
     Debug.Trace("[SMM] Invalid Partner Gender")
     return false
   EndIf
-  int arousal = GetArousal(that)
+  int arousal = SMMAnimation.GetArousal(that)
   bool aroused
   If(fol)
     aroused = arousal >= JMap.getInt(jTmp, "iArousalPartnerFol")
@@ -318,29 +311,29 @@ bool Function ValidPartner(Actor that, int jTmp)
 EndFunction
 
 bool Function isValidGenderCombination(Actor init, Actor partner)
-  bool sol = false
+  bool ret = false
   bool followerInit = init.IsInFaction(PlayerFollowerFaction) || init.IsPlayerTeammate()
   If(partner.IsInFaction(PlayerFollowerFaction) || partner.IsPlayerTeammate())
     int row = GetActorType(partner) * 7
     If(init == PlayerRef)
-      sol = MCM.bAssaultFol[row]
+      ret = MCM.bAssaultFol[row]
     ElseIf(followerInit)
-      sol = MCM.bAssaultFol[row + 1]
+      ret = MCM.bAssaultFol[row + 1]
     Else
-      sol = MCM.bAssaultFol[row + GetActorType(init) + 2]
+      ret = MCM.bAssaultFol[row + GetActorType(init) + 2]
     EndIf
   Else
     int row = GetActorType(partner) * 7
     If(init == PlayerRef)
-      sol = MCM.bAssaultNPC[row]
+      ret = MCM.bAssaultNPC[row]
     ElseIf(followerInit)
-      sol = MCM.bAssaultNPC[row + 1]
+      ret = MCM.bAssaultNPC[row + 1]
     Else
-      sol = MCM.bAssaultNPC[row + GetActorType(init) + 2]
+      ret = MCM.bAssaultNPC[row + GetActorType(init) + 2]
     EndIf
   EndIf
-  Debug.TraceConditional("[SMM] Invalid Gender Combination", !sol)
-  return sol
+  Debug.TraceConditional("[SMM] Invalid Gender Combination", !ret)
+  return ret
 EndFunction
 ; ===============================================================
 ; =============================  ADVANCED CONDITIONING
@@ -374,44 +367,10 @@ EndFunction
 ; ===============================================================
 ; =============================  UTILITY
 ; ===============================================================
-; Take the maximum amount of Potential Partners and return the allowed Number of Partners for this Matching
-int Function GetNumPartners(int cap)
-  If(cap < 2)
-    Debug.Trace("[SMM] Allowed Number of Partners: " + i + "; Cap: " + cap)
-    return cap
-  EndIf
-  int[] weights = MCM.getXsomeWeight()
-  int allCells = 0
-  int i = 0
-  While(i < weights.length && i < cap)
-    allCells += weights[i]
-    i += 1
-  EndWhile
-  int thisCell = Utility.RandomInt(1, allCells)
-  int sol = 0
-  i = 0
-  While(sol < thisCell)
-    sol += weights[i]
-    i += 1
-  EndWhile
-  i += 1 ; Return number of partners not chamber. (1st Chamber <=> 2some, 2nd chamber <=> 3some, ...)
-  Debug.Trace("[SMM] Allowed Number of Partners: " + i + "; Cap: " + cap)
-  return i
-EndFunction
-
-int Function GetArousal(Actor that)
-  If(MCM.bSLAllowed)
-    return SMMSexlab.GetArousal(that)
-  ElseIf(that.HasKeyword(ActorTypeNPC) && MCM.bOStimAllowed)
-    return SMMOstim.GetArousal(that)
-  EndIf
-  return -1
-EndFunction
-
 ;0 - Male, 1 - Female, 2 - Futa, 3 - Male Creature, 4 - Female Creature
 int Function GetActorType(Actor me)
   If(MCM.bSLAllowed)
-    return SMMSexLab.getActorType(me)
+    return SMMAnimationSL.getActorType(me)
   else
     If(me.HasKeyword(ActorTypeNPC))
       return me.GetLeveledActorBase().GetSex()
@@ -489,29 +448,24 @@ Actor[] Function GetActors()
   int jCooldowns = JValue.readFromFile(filePath + "Definition\\Cooldowns.json")
   int i = 0
   While(i < aliases.length)
-    Actor tmp = (aliases[i] as ReferenceAlias).GetReference() as Actor
-    If(tmp != none)
+    Actor subject = (aliases[i] as ReferenceAlias).GetReference() as Actor
+    If(subject && JMap.getFlt(jCooldowns, subject.GetFormID() as String) + (JMap.getFlt(jProfile, "fEngageCooldown") / 24) < GameDaysPassed.Value)
       bool accept = false
-      String ID = tmp.GetFormID() as String
-      If(JMap.getFlt(jCooldowns, tmp.GetFormID()) + (JMap.getFlt(jProfile, "fEngageCooldown") / 24) > GameDaysPassed.Value)
+      bool npc = subject.HasKeyword(ActorTypeNPC)
+      If(!npc && (!MCM.FrameCreature || !IsValidRace(subject)))
         ;
-      ElseIf(!IsValidRace(tmp))
-        ;
-      ElseIf(tmp.IsInFaction(PlayerFollowerFaction) || tmp.IsPlayerTeammate())
+      ElseIf(subject.IsInFaction(PlayerFollowerFaction) || subject.IsPlayerTeammate())
         accept = JMap.getInt(jProfile, "bConsiderFollowers")
       Else
-        int cC = JMap.getInt(jProfile, "lConsiderCreature")
-        bool npc = tmp.HasKeyword(ActorTypeNPC)
-        If(cC == 0 || (cC == 1 && npc) || (cC == 2 && !npc))
-          int cH = JMap.getInt(jProfile, "lConsider")
-          bool hostile = tmp.IsHostileToActor(PlayerRef)
-          If(cH == 0 || (cH == 1 && !hostile) || (cH == 2 && hostile))
-            accept = true
-          EndIf
-        EndIf
+        int considerRace = JMap.getInt(jProfile, "lConsiderCreature")
+        If(considerRace == 0 || npc && considerRace == 1 || !npc && considerRace == 2)
+          bool hostile = subject.IsHostileToActor(PlayerRef)
+          int considerAlly = JMap.getInt(jProfile, "lConsider")
+          accept = considerAlly == 0 || !hostile && considerAlly == 1 || hostile && considerAlly == 2
+        EndiF
       EndIf
       If(accept)
-        ret[i] = tmp
+        ret[i] = subject
       EndIf
     EndIf
     i += 1
@@ -519,17 +473,9 @@ Actor[] Function GetActors()
   return PapyrusUtil.RemoveActor(ret, none)
 EndFunction
 
-Function Stop()
+Function ShutDown()
   jProfile = JValue.release(jProfile)
-  GoToState("Abandon")
-  RegisterForSingleUpdate(1.1)
+  PlayerScr.RegisterForSingleUpdate(MCM.iTickInterval)
 EndFunction
-State Abandon
-  Event OnUpdate()
-    PlayerScr.RegisterForSingleUpdate(MCM.iTickInterval)
-    Parent.Stop()
-    GoToState("")
-  EndEvent
-EndState
 
 ; 70unit = 1m

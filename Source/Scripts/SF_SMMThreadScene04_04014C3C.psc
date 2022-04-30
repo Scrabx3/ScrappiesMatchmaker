@@ -5,7 +5,7 @@ Scriptname SF_SMMThreadScene04_04014C3C Extends Scene Hidden
 ;BEGIN FRAGMENT Fragment_0
 Function Fragment_0()
 ;BEGIN CODE
-(GetOwningQuest() as SMMThread).Stop()
+GetOwningQuest().Stop()
 ;END CODE
 EndFunction
 ;END FRAGMENT
