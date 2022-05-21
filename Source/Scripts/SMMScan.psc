@@ -68,6 +68,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
       return
     EndIf
     Debug.Trace("[SMM] <Scan> Found Initiator: " + init)
+    colAct = PapyrusUtil.RemoveActor(colAct, init)
     ; Figure out maximum Number of Partners
     int numPartners = SMMAnimation.GetAllowedParticipants(colAct.Length + 1) - 1
     If(numPartners < 1)
@@ -154,9 +155,7 @@ Actor Function GetInitiator(Actor[] them)
   int i = 0 
   While(i < them.Length)
     If(ValidInitiator(them[i]))
-      Actor ret = them[i]
-      them = PapyrusUtil.RemoveActor(them, ret)
-      return ret
+      return them[i]
     EndIf
     i += 1
   EndWhile
@@ -183,9 +182,9 @@ bool Function ValidInitiator(Actor that)
     int p = 0
     int[] v
     If(alg == 2)
-      v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
+      v = SMMUtility.asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
     Else
-      v = SMMMCM.asJIntArray(JMap.getObj(jProfile, "cAChances"))
+      v = SMMUtility.asJIntArray(JMap.getObj(jProfile, "cAChances"))
     EndIf    
     int i = 0
     While(i < v.Length)

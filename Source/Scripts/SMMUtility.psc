@@ -28,3 +28,27 @@ int Function GetFromWeight(int[] weights) global
   EndWhile
   return n
 EndFunction
+
+; JContainers in LE is outdated. Using workaround Functions to get Array manually
+; Dw lads, its just JContainers and 20 other Utilities, LE is still doing fiiiine
+Form[] Function asJFormArray(int jObj) global
+  int m = JArray.count(jObj)
+  Form[] ret = PapyrusUtil.FormArray(m)
+  int i = 0
+  While(i < m)
+    ret[i] = JArray.getForm(jObj, i)
+    i += 1
+  EndWhile
+  return ret
+EndFunction
+
+int[] Function asJIntArray(int jObj) global
+  int m = JArray.count(jObj)
+  int[] ret = Utility.CreateIntArray(m)
+  int i = 0
+  While(i < m)
+    ret[i] = JArray.getInt(jObj, i)
+    i += 1
+  EndWhile
+  return ret
+EndFunction

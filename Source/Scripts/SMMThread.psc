@@ -29,8 +29,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   Debug.Trace("[SMM] <Thread> ID: " + self + " | Initiator = " + init)
   ; Collect the Actors to start the Scene with
   If(jActors != 0)
-    Form[] jActorForms = JArray.asFormArray(jActors)
-    ; Form[] jActorForms = SMMMCM.asJFormArray(jActors)
+    Form[] jActorForms = SMMUtility.asJFormArray(jActors)
     partners = PapyrusUtil.ActorArray(jActorForms.Length)
     int i = 0
     While(i < partners.length)
@@ -50,10 +49,13 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   ; Start Scene
   MyScene.Start()
   If(!MyScene.IsPlaying())
-    Debug.Trace("[SMM] " + Self + " Scene Failed to Start")
+    Debug.Trace("[SMM] " + self + " Scene Failed to Start")
     Stop()
+  Else
+    partners[0].EvaluatePackage()
   EndIf
 EndEvent
+
 Function DefClosest(Actor[] them)
   float c = them[0].GetDistance(init)
   int slot0 = 0
@@ -103,7 +105,6 @@ Function StartScene()
     partners = PapyrusUtil.RemoveActor(them, none)
     StartAnimation()
   EndIf
-  StorageUtil.SetFormValue(init, "SMMThread", self)
   init.AddSpell(GatherSurroundingActors, false)
 EndFunction
 
