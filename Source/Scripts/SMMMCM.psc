@@ -10,9 +10,15 @@ int Property iPauseKey = -1 Auto Hidden
 int Property iTickInterval = 20 Auto Hidden
 GlobalVariable Property gScanRadius Auto
 int Property iMaxScenes = 1 Auto Hidden
-; Definitions
+; Day Time
 float Property fDuskTime = 19.00 Auto Hidden
 float Property fDawnTime = 5.00 Auto Hidden
+; Miscealleneous
+float Property fEngageCooldown = 6.0 Auto Hidden
+bool Property bNotifyAF = false Auto Hidden
+bool Property bNotifyColor = false Auto Hidden
+int iNotifyColor = 0xFF0000
+string Property sNotifyColor = "#FF0000" Auto Hidden
 ; ---- Locations
 String[] Property lProfiles Auto Hidden
 
@@ -29,7 +35,7 @@ String[] lAdvancedInitList
 String[] lReqList
 
 ; --- Threading
-int Property iResMaxRounds = 6 Auto Hidden
+int Property iResMaxRounds = 4 Auto Hidden
 float Property fResNextRoundChance = 15.0 Auto Hidden
 float Property fAddActorChance = 50.0 Auto Hidden
 
@@ -42,19 +48,14 @@ bool Property bSpecGender = false Auto Hidden
 bool Property bSpecCrt = false Auto Hidden
 
 ; --- Adult Frames
-int afHideSL = 1
-int afHideOStim = 1
 bool Property bSLAllowed = true Auto Hidden Conditional
 bool Property bOStimAllowed = true Auto Hidden Conditional
 bool Property bCrtOnly = false Auto Hidden
-bool Property bNotifyAF = false Auto Hidden
-bool Property bNotifyColorAF = false Auto Hidden
-int iNotifyColorAF = 0xFF0000
-string Property sNotifyColorAF = "#FF0000" Auto Hidden
 ; SexLab
-bool Property bBestiality = true Auto Hidden
-bool Property bSupportFilter = true Auto Hidden
-string[] Property SLTags Auto Hidden
+bool Property bBestiality = false Auto Hidden
+bool Property bSupportFilter = false Auto Hidden
+String[] Property SLTags Auto Hidden
+{F<-M // M<-M // M<-F // F<-F // M<-* // F<-*}
 ; OStim
 float Property fOtMinD = 30.0 Auto Hidden
 float Property fOtMaxD = 45.0 Auto Hidden
@@ -87,7 +88,7 @@ bool[] Property bValidRace Auto Hidden
 ; =============================  STARTUP // UTILITY
 ; ===============================================================
 int Function GetVersion()
-  return 2
+  return 3
 EndFunction
 
 Event OnVersionUpdate(int newVers)
@@ -97,6 +98,11 @@ Event OnVersionUpdate(int newVers)
     iSceneTypeWeight[1] = 60
     iSceneTypeWeight[2] = 35
     iSceneTypeWeight[3] = 20
+  ElseIf(newVers == 3)
+    SLTags = new String[6]
+  EndIf
+  If(newVers == GetVersion())
+    LoadMCM()
   EndIf
 EndEvent
 
@@ -175,7 +181,7 @@ Function Initialize()
     i += 1
   EndWhile
 
-  SLTags = new String[11]
+  ; SLTags = new String[11]
   bValidRace = new bool[52]
 EndFunction
 
@@ -199,12 +205,18 @@ Event OnPageReset(string Page)
     AddSliderOptionST("ScanRadius", "$SMM_ScanRadius", gScanRadius.Value/70, "{0}m")
     AddSliderOptionST("ScenesPerScan", "$SMM_ScenesPerScan", iMaxScenes, "{0}")
     SetCursorPosition(1)
-    AddHeaderOption("$SMM_Definitions")
+    AddHeaderOption("$SMM_DayTime")
     AddSliderOptionST("DefDuskTime", "$SMM_DuskTime", fDuskTime, "{1}0")
     AddSliderOptionST("DefDawnTime", "$SMM_DawnTime", fDawnTime, "{1}0")
-    SetCursorPosition(21) ; 23 is bottom right without scrolling
+    AddHeaderOption("$SMM_Misc")
+    AddSliderOptionST("EngageCooldown", "$SMM_EngageCooldown", fEngageCooldown, "{1}h")
+		AddToggleOptionST("afNotify", "$SMM_EngageNotify", bNotifyAF)
+		AddToggleOptionST("notifycolored", "$SMM_EngageNotifyColor", bNotifyColor, getFlag(bNotifyAF))
+    AddColorOptionST("notifycolorchoice", "$SMM_EngageNofityColorChoice", iNotifyColor, getFlag(bNotifyAF && bNotifyColor))
+    SetCursorPosition(19) ; 23 is bottom right without scrolling
     AddHeaderOption("$SMM_Debug")
     AddTextOptionST("shutdownThreads", "$SMM_ShutDown", "")
+    AddTextOptionST("loadmcm", "$SMM_Load", "")
 
   ElseIf(Page == "$SMM_Locs")
     CreateMenuProfiles(1)
@@ -231,7 +243,8 @@ Event OnPageReset(string Page)
     AddMenuOptionST("smmProfilesLoad", "$SMM_ProfileLoad", thisProfile)
     AddInputOptionST("smmProfilesAdd", "$SMM_ProfileAdd", none)
     SetCursorPosition(1)
-    AddTextOptionST("ProfilesHelp", "$SMM_Help", none)
+    AddEmptyOption()
+    ; AddTextOptionST("ProfilesHelp", "$SMM_Help", none)
     AddTextOptionST("ProfileDefinition", "$SMM_Definition", none)
     SetCursorPosition(4)
     If(thisProfile == "")
@@ -245,7 +258,6 @@ Event OnPageReset(string Page)
     AddSliderOptionST("EngageChance", "$SMM_EngageChance", JMap.getFlt(jProfile, "fEngageChance"), "{1}%")
     AddSliderOptionST("EngageTimeMax", "$SMM_EngageTimeMax", JMap.getFlt(jProfile, "fEngageTimeMax"), "{2}")
     AddSliderOptionST("EngageTimeMin", "$SMM_EngageTimeMin", JMap.getFlt(jProfile, "fEngageTimeMin"), "{2}")
-    AddSliderOptionST("EngageCooldown", "$SMM_EngageCooldown", JMap.getFlt(jProfile, "fEngageCooldown"), "{1}h")
     SetCursorPosition(5)
     ; ======================== CONSIDERATION
     AddHeaderOption(classColors[4] + "$SMM_Consideration")
@@ -254,7 +266,7 @@ Event OnPageReset(string Page)
     AddToggleOptionST("considerFollower", "$SMM_ConsiderFollower", JMap.getInt(jProfile, "bConsiderFollowers"))
     AddEmptyOption()
     AddEmptyOption()
-    SetCursorPosition(16)
+    SetCursorPosition(14)
     ; ======================== INITIATOR
     AddHeaderOption(classColors[5] + "$SMM_Initiator")
     int aca = JMap.getInt(jProfile, "lAdvInit")
@@ -265,7 +277,7 @@ Event OnPageReset(string Page)
     AddSliderOptionST("InitHealth", "$SMM_HealthThresh", JMap.getInt(jProfile, "rHealthThresh") * 100, "{0}%", getFlag(aca > 0))
     AddSliderOptionST("InitStamina", "$SMM_StaminaThresh", JMap.getInt(jProfile, "rStaminaThresh") * 100, "{0}%", getFlag(aca > 0))
     AddSliderOptionST("InitMagicka", "$SMM_MagickaThresh", JMap.getInt(jProfile, "rMagickaThresh") * 100, "{0}%", getFlag(aca > 0))
-    SetCursorPosition(17)
+    SetCursorPosition(15)
     AddHeaderOption("")
     AddSliderOptionST("PlayerInit", "$SMM_PlayerInitiator", JMap.getInt(jProfile, "fPlayerInit"), "{1}%")
     int jTmp = JMap.getObj(jProfile, "bGenderInit")
@@ -276,7 +288,7 @@ Event OnPageReset(string Page)
       EndIf
       i += 1
     EndWhile
-    SetCursorPosition(32)
+    SetCursorPosition(30)
     ; ---------------------------
     AddHeaderOption("$SMM_ReqConditioning")
     AddMenuOptionST("AdvConAlg", "$SMM_AdvConAlg", lAdvancedInitList[aca])
@@ -287,7 +299,7 @@ Event OnPageReset(string Page)
       While(i < c.Length)
         AddMenuOptionST("reqPoints_" + i, "$SMM_AdvCon_" + i, lReqList[c[i]])
         If(i == 6)
-          SetCursorPosition(37)
+          SetCursorPosition(35)
           AddTextOptionST("AdvCondition", "$SMM_Help", none)
         EndIf
         i += 1
@@ -298,13 +310,13 @@ Event OnPageReset(string Page)
       While(i < c.Length)
         AddSliderOptionST("aChances_" + i, "$SMM_AdvCon_" + i, c[i], "{1}%", getFlag(aca == 1))
         If(i == 6)
-          SetCursorPosition(37)
+          SetCursorPosition(35)
           AddTextOptionST("AdvCondition", "$SMM_Help", none)
         EndIf
         i += 1
       EndWhile
     EndIf
-    SetCursorPosition(52)
+    SetCursorPosition(50)
     ; ======================== PARTNER
     AddHeaderOption(classColors[6] + "$SMM_Partner")
     AddSliderOptionST("ArousalPartner", "$SMM_Arousal", JMap.getInt(jProfile, "iArousalPartner"), "{0}")
@@ -318,7 +330,7 @@ Event OnPageReset(string Page)
       i += 1
     EndWhile
     AddSliderOptionST("GenderPartner_" + i, "$SMM_GenderAllow_" + i, JArray.getInt(jTmp, i), "{1}%")
-    SetCursorPosition(53)
+    SetCursorPosition(51)
     ; ======================== MATCHING
     AddHeaderOption(classColors[7] + "$SMM_Matching")
     AddToggleOptionST("NonConsent", "$SMM_NonConsent", JMap.getInt(jProfile, "bConsent"))
@@ -350,40 +362,32 @@ Event OnPageReset(string Page)
 		AddToggleOptionST("SLAllowed", "$SMM_afFrameSexLab", bSLAllowed, getFlag(SLThere))
 		AddToggleOptionST("OStimAllowed", "$SMM_afFrameOStim", bOStimAllowed, getFlag(OStimThere))
 		AddEmptyOption()
-		AddToggleOptionST("SLCrtOnly", "$SMM_afFrameSexLabCrtOnly", bCrtOnly, getFlag(SLThere))
-		AddEmptyOption()
-		AddHeaderOption("$SMM_afThreads")
-		AddToggleOptionST("afNotify", "$SMM_afAssaultNotify", bNotifyAF)
-		; ===============================================
-		SetCursorPosition(1)
-		AddHeaderOption("$SMM_afFrameSexLab")
-		AddTextOptionST("hideSL", "$SMM_SLHide_" + afHideSL, "")
-		If(afHideSL == 0)
-			AddToggleOptionST("SLSupportFilter", "$SMM_SLFilterOption", bSupportFilter, getFlag(SLThere))
-			AddToggleOptionST("SupBestiality", "$SMM_SupBestiality", bBestiality, getFlag(SLThere))
-			AddEmptyOption()
-			AddTextOptionST("SLTaggingReadMe", "$SMM_Help", "", getFlag(SLThere))
-			int i = 0
-			While(i < SLTags.length)
-				AddInputOptionST("SLTag_" + i, "$SMM_SLTags_" + i, SLTags[i], getFlag(SLThere))
-				i += 1
-			EndWhile
-		EndIf
-		AddHeaderOption("$SMM_afFrameOStim")
-		AddTextOptionST("hideOstim", "$SMM_OStimHide_" + afHideOStim, "")
-		If(afHideOStim == 0)
-			AddSliderOptionST("ostimMinD", "$SMM_afOStimMinDur", fOtMinD, "{0}s", getFlag(OStimThere))
-			AddSliderOptionST("ostimMaxD", "$SMM_afOStimMaxDur", fOtMaxD, "{0}s", getFlag(OStimThere))
-		EndIf
-		AddHeaderOption("")
+		AddToggleOptionST("SLCrtOnly", "$SMM_afFrameSexLabCrtOnly", bCrtOnly, getFlag(SLThere && OStimThere))
+		AddHeaderOption("$SMM_Solo")
 		AddSliderOptionST("af1pWeightFol", "$SMM_af1pWeightFol", fAFMasturbateFol, "{0}%")
 		AddSliderOptionST("af1pWeightNPC", "$SMM_af1pWeightNPC", fAFMasturbateNPC, "{0}%")
+    AddEmptyOption()
     AddHeaderOption("$SMM_SceneTypes")
     int n = 0
     While(n < iSceneTypeWeight.Length)
       AddSliderOptionST("scenetype_" + n, "$SMM_SceneType_" + n, iSceneTypeWeight[n], "{0}", getFlag(SLThere || OStimThere))
       n += 1
     EndWhile
+		; ===============================================
+		SetCursorPosition(1)
+		AddToggleOptionST("SLSupportFilter", "$SMM_SLFilterOption", bSupportFilter, getFlag(SLThere))
+		AddHeaderOption("$SMM_afFrameSexLab")
+		AddToggleOptionST("SupBestiality", "$SMM_SupBestiality", bBestiality, getFlag(SLThere))
+		AddEmptyOption()
+		AddTextOptionST("SLTaggingReadMe", "", "$SMM_Help", getFlag(SLThere))
+		int i = 0
+		While(i < SLTags.length)
+			AddInputOptionST("SLTag_" + i, "$SMM_SLTags_" + i, SLTags[i], getFlag(SLThere))
+			i += 1
+		EndWhile
+		AddHeaderOption("$SMM_afFrameOStim")
+		AddSliderOptionST("ostimMinD", "$SMM_afOStimMinDur", fOtMinD, "{0}s", getFlag(OStimThere))
+		AddSliderOptionST("ostimMaxD", "$SMM_afOStimMaxDur", fOtMaxD, "{0}s", getFlag(OStimThere))
 
   ElseIf(Page == "$SMM_Filter")
     int i = 0
@@ -438,6 +442,7 @@ Event OnConfigClose()
     SaveJson()
   EndIf
   JValue.releaseObjectsWithTag("SMM")
+  SaveMCM()
 EndEvent
 
 ; ===============================================================
@@ -453,6 +458,18 @@ Event OnSelectST()
       i += 1
     EndWhile
     ShowMessage("$SMM_shutdownThreadsDone", false, "$SMM_Ok")
+  ElseIf(option[0] == "afNotify")
+    bNotifyAF = !bNotifyAF
+		SetToggleOptionValueST(bNotifyAF)
+		SetOptionFlagsST(getFlag(bNotifyAF), true, "notifycolored")
+		SetOptionFlagsST(getFlag(bNotifyAF && bNotifyColor), false, "notifycolorchoice")
+  ElseIf(option[0] == "notifycolored")
+		bNotifyColor = !bNotifyColor
+		SetToggleOptionValueST(bNotifyColor)
+		SetOptionFlagsST(getFlag(bNotifyAF && bNotifyColor), false, "notifycolorchoice")
+  ElseIf(option[0] == "loadmcm")
+    LoadMCM()
+    ForcePageReset()
 
   ElseIf(option[0] == "considerFollower")  ; Profiles
     int val = JMap.getInt(jProfile, "bConsiderFollowers")
@@ -497,15 +514,7 @@ Event OnSelectST()
 		bSpecCrt = !bSpecCrt
 		SetToggleOptionValueST(bSpecCrt)
 
-	ElseIf(option[0] == "afNotifyColor") ; Adult Frames
-		bNotifyColorAF = !bNotifyColorAF
-		SetToggleOptionValueST(bNotifyColorAF)
-		If(bNotifyColorAF)
-			SetOptionFlagsST(OPTION_FLAG_NONE, false, "afNotifyColorChoice")
-		else
-			SetOptionFlagsST(OPTION_FLAG_DISABLED, false, "afNotifyColorChoice")
-		EndIf
-	ElseIf(option[0] == "SLSupportFilter")
+	ElseIf(option[0] == "SLSupportFilter") ; Adult Frames
 		bSupportFilter = !bSupportFilter
 		SetToggleOptionValueST(bSupportFilter)
   ElseIf(option[0] == "SupBestiality")
@@ -517,12 +526,6 @@ Event OnSelectST()
 	ElseIf(option[0] == "OStimAllowed")
 		bOStimAllowed = !bOStimAllowed
 		SetToggleOptionValueST(bOStimAllowed)
-  ElseIf(option[0] == "hideSL")
-    afHideSL = Math.abs(afHideSL - 1) as int
-    ForcePageReset()
-  ElseIf(option[0] == "hideOstim")
-    afHideOStim = Math.abs(afHideOStim - 1) as int
-    ForcePageReset()
   ElseIf(option[0] == "SLCrtOnly")
     bCrtOnly = !bCrtOnly
     SetToggleOptionValueST(bCrtOnly)
@@ -584,6 +587,11 @@ Event OnSliderOpenST()
     SetSliderDialogDefaultValue(5.0)
     SetSliderDialogRange(4, 8)
     SetSliderDialogInterval(0.5)
+  ElseIf(option[0] == "EngageCooldown")
+    SetSliderDialogStartValue(fEngageCooldown)
+    SetSliderDialogDefaultValue(70)
+    SetSliderDialogRange(0, 48)
+    SetSliderDialogInterval(0.5)
 
   ElseIf(option[0] == "ArousalInit") ; Profile
     SetSliderDialogStartValue(JMap.getInt(jProfile, "iArousalInit"))
@@ -630,11 +638,6 @@ Event OnSliderOpenST()
     SetSliderDialogDefaultValue(70)
     SetSliderDialogRange(0, 24)
     SetSliderDialogInterval(0.05)
-  ElseIf(option[0] == "EngageCooldown")
-    SetSliderDialogStartValue(JMap.getFlt(jProfile, "fEngageCooldown"))
-    SetSliderDialogDefaultValue(70)
-    SetSliderDialogRange(0, 48)
-    SetSliderDialogInterval(0.5)
   ElseIf(option[0] == "Distance")
     SetSliderDialogStartValue(JMap.getFlt(jProfile, "fDistance"))
     SetSliderDialogDefaultValue(60)
@@ -686,7 +689,7 @@ Event OnSliderOpenST()
     
   ElseIf(option[0] == "TMaxRounds") ; Threading
     SetSliderDialogStartValue(iResMaxRounds)
-    SetSliderDialogDefaultValue(6)
+    SetSliderDialogDefaultValue(4)
     SetSliderDialogRange(0, 30)
     SetSliderDialogInterval(1)
   ElseIf(option[0] == "TNextRound")
@@ -756,6 +759,9 @@ Event OnSliderAcceptST(Float afValue)
   ElseIf(option[0] == "DefDawnTime")
     fDawnTime = afValue as Int
     SetSliderOptionValueST(fDawnTime, "{1}0")
+  ElseIf(option[0] == "EngageCooldown")
+    fEngageCooldown = afValue
+    SetSliderOptionValueST(afValue, "{1}h")
     
   ElseIf(option[0] == "ArousalInit") ; Profile
     JMap.setInt(jProfile, "iArousalInit", afValue as int)
@@ -784,9 +790,6 @@ Event OnSliderAcceptST(Float afValue)
   ElseIf(option[0] == "EngageTimeMax")
     JMap.setFlt(jProfile, "fEngageTimeMax", afValue)
     SetSliderOptionValueST(afValue, "{2}")
-  ElseIf(option[0] == "EngageCooldown")
-    JMap.setFlt(jProfile, "fEngageCooldown", afValue)
-    SetSliderOptionValueST(afValue, "{1}h")
   ElseIf(option[0] == "Distance")
     JMap.setFlt(jProfile, "fDistance", afValue)
     SetSliderOptionValueST(afValue, "{1}m")
@@ -978,6 +981,10 @@ Event OnHighlightST()
     SetInfoText("$SMM_DuskTimeHighlight")
   ElseIf(option[0] == "DefDawnTime")
     SetInfoText("$SMM_DawnTimeHighlight")
+  ElseIf(option[0] == "afNotify")
+    SetInfoText("$SMM_EngageNotifyHighlight")
+	ElseIf(option[0] == "notifycolored")
+		SetInfoText("$SMM_EngageNofifyColorHighlight")
 
   ElseIf(option[0] == "shutdownThreads") ; General/Debug
     SetInfoText("$SMM_ShutDownHighlight")
@@ -1065,15 +1072,13 @@ Event OnHighlightST()
 		SetInfoText("$SMM_afFrameOStimHighlight")
 	ElseIf(option[0] == "SLCrtOnly")
 		SetInfoText("$SMM_afFrameSexLabCrtOnlyHighlight")
-	ElseIf(option[0] == "afNotifyColor")
-		SetInfoText("$SMM_afAssaultNofifyColorHighlight")
 	ElseIf(option[0] == "SLTreatVictim")
 		SetInfoText("$SMM_SLTreatVictimHighlight")
 	ElseIf(option[0] == "SLSupportFilter")
 		SetInfoText("$SMM_SLFilterOptionHighlight")
 	ElseIf(option[0] == "ostimMinD" || option[0] == "ostimMaxD")
 		SetInfoText("$SMM_afOStimMinMaxDurHighlight")
-  ElseIf(option[0] == "af1pWeightFol" || option[0] == "af1pWeightNPC" || option[0] == "af1pWeightCrt")
+  ElseIf(option[0] == "af1pWeightFol" || option[0] == "af1pWeightNPC")
     SetInfoText("$SMM_af1pWeightHighlight")
 
   ElseIf(option[0] == "crtFilterMethod") ; Creature Filter
@@ -1126,6 +1131,32 @@ State PauseKey
   Event OnHighlightST()
     SetInfoText("SMM_PauseHotkeyHighlight")
   EndEvent
+EndState
+
+State notifycolorchoice
+	Event OnColorOpenST()
+		SetColorDialogStartColor(iNotifyColor)
+		SetColorDialogDefaultColor(0xFF0000)
+	EndEvent
+	Event OnColorAcceptST(int color)
+		iNotifyColor = color
+		SetColorOptionValueST(iNotifyColor)
+    ; Convert the color code into a hex string for display in notifications
+    String hex = ""
+    While(color != 0)
+      int c = color % 16
+      If(c < 10)
+        hex = c + hex
+      Else
+        hex = StringUtil.AsChar(55 + c) + hex
+      EndIf
+      color /= 16
+    EndWhile
+    While(StringUtil.GetLength(hex) < 6)
+      hex = "0" + hex
+    EndWhile
+    sNotifyColor = "#" + hex
+	EndEvent
 EndState
 
 ; ===============================================================
@@ -1202,19 +1233,6 @@ State smmProfilesLoad
 EndState
 
 ; =============================================================
-; ===================================== ANIM FRAMES
-; =============================================================
-State afNotify
-	Event OnSelectST()
-		bNotifyAF = !bNotifyAF
-		SetToggleOptionValueST(bNotifyAF)
-	EndEvent
-	Event OnHighlightST()
-		SetInfoText("$Yam_afAssaultNotifyHighlight")
-	EndEvent
-EndState
-
-; =============================================================
 ; ===================================== MISC UTILITY
 ; =============================================================
 int Function getFlag(bool option)
@@ -1224,6 +1242,114 @@ int Function getFlag(bool option)
 		return OPTION_FLAG_DISABLED
 	EndIf
 endFunction
+
+Function SaveMCM()
+  int obj = JMap.object()
+  JMap.setInt(obj, "iPauseKey", iPauseKey)
+  JMap.setInt(obj, "iTickInterval", iTickInterval)
+  JMap.setFlt(obj, "gScanRadius", gScanRadius.Value)
+  JMap.setInt(obj, "iMaxScenes", iMaxScenes)
+  JMap.setFlt(obj, "fDuskTime", fDuskTime)
+  JMap.setFlt(obj, "fDawnTime", fDawnTime)
+  JMap.setFlt(obj, "fEngageCooldown", fEngageCooldown)
+  JMap.setObj(obj, "lProfiles", JArray.objectWithStrings(lProfiles))
+  JMap.setInt(obj, "iResMaxRounds", iResMaxRounds)
+  JMap.setFlt(obj, "fResNextRoundChance", fResNextRoundChance)
+  JMap.setFlt(obj, "fAddActorChance", fAddActorChance)
+  JMap.setInt(obj, "iStalkTime", iStalkTime)
+  JMap.setInt(obj, "bStalkNotify", bStalkNotify as int)
+  JMap.setInt(obj, "bStalkNotifyName", bStalkNotifyName as int)
+  JMap.setFlt(obj, "fSpecChance", fSpecChance)
+  JMap.setInt(obj, "bSpecGender", bSpecGender as int)
+  JMap.setInt(obj, "bSpecCrt", bSpecCrt as int)
+  JMap.setInt(obj, "bNotifyAF", bNotifyAF as int)
+  JMap.setInt(obj, "bNotifyColor", bNotifyColor as int)
+  JMap.setInt(obj, "iNotifyColor", iNotifyColor)
+  JMap.setStr(obj, "sNotifyColor", sNotifyColor)
+  JMap.setInt(obj, "bBestiality", bBestiality as int)
+  JMap.setInt(obj, "bSupportFilter", bSupportFilter as int)
+  JMap.setObj(obj, "SLTags", JArray.objectWithStrings(SLTags))
+  JMap.setFlt(obj, "fOtMinD", fOtMinD)
+  JMap.setFlt(obj, "fOtMaxD", fOtMaxD)
+  JMap.setFlt(obj, "fAFMasturbateFol", fAFMasturbateFol)
+  JMap.setFlt(obj, "fAFMasturbateNPC", fAFMasturbateNPC)
+  JMap.setObj(obj, "iSceneTypeWeight", JArray.objectWithInts(iSceneTypeWeight))
+  JMap.setObj(obj, "bAssaultNPC", JArray.objectWithBooleans(bAssaultNPC))
+  JMap.setObj(obj, "bAssaultFol", JArray.objectWithBooleans(bAssaultFol))
+  JMap.setInt(obj, "iCrtFilterMethod", iCrtFilterMethod)
+  JMap.setObj(obj, "JbValidRace", JArray.objectWithBooleans(bValidRace))
+  JValue.writeToFile(obj, filePath + "MCM.json")
+EndFunction
+
+Function LoadMCM()
+  int obj = JValue.readFromFile(filePath + "MCM.json")
+  If(obj == 0)
+    return
+  EndIf
+  iPauseKey = JMap.getInt(obj, "iPauseKey", -1)
+  iTickInterval = JMap.getInt(obj, "iTickInterval", 20)
+  gScanRadius.Value = JMap.getFlt(obj, "gScanRadius", 7700)
+  iMaxScenes = JMap.getInt(obj, "iMaxScenes", 1)
+  fDuskTime = JMap.getFlt(obj, "fDuskTime", 19.00)
+  fDawnTime = JMap.getFlt(obj, "fDawnTime", 5.00)
+  fEngageCooldown = JMap.getFlt(obj, "fEngageCooldown", 6.0)
+  int objProfiles = JMap.getObj(obj, "lProfiles")
+  If(objProfiles == 0)
+    lProfiles = Utility.CreateStringArray(28, "$SMM_Disabled")
+  Else
+    lProfiles = SMMUtility.asJStringArray(objProfiles)
+  EndIf
+  iResMaxRounds = JMap.getInt(obj, "iResMaxRounds", 4)
+  fResNextRoundChance = JMap.getFlt(obj, "fResNextRoundChance", 15.0)
+  fAddActorChance = JMap.getFlt(obj, "fAddActorChance", 50.0)
+  iStalkTime = JMap.getInt(obj, "iStalkTime", 20)
+  bStalkNotify = JMap.getInt(obj, "bStalkNotify", 0)
+  bStalkNotifyName = JMap.getInt(obj, "bStalkNotifyName", 0)
+  fSpecChance = JMap.getFlt(obj, "fSpecChance", 82.00)
+  bSpecGender = JMap.getInt(obj, "bSpecGender", 0)
+  bSpecCrt = JMap.getInt(obj, "bSpecCrt", 0)
+  bNotifyAF = JMap.getInt(obj, "bNotifyAF", 0)
+  bNotifyColor = JMap.getInt(obj, "bNotifyColor", 0)
+  iNotifyColor = JMap.getInt(obj, "iNotifyColor", 0xFF0000)
+  sNotifyColor = JMap.getStr(obj, "sNotifyColor", "#FF0000")
+  bBestiality = JMap.getInt(obj, "bBestiality", 0)
+  bSupportFilter = JMap.getInt(obj, "bSupportFilter", 0)
+  int objTags = JMap.getObj(obj, "SLTags")
+  If(objTags == 0)
+    SLTags = Utility.CreateStringArray(6)
+  Else
+    SLTags = SMMUtility.asJStringArray(objTags)
+  EndIf
+  fOtMinD = JMap.getFlt(obj, "fOtMinD", 30.0)
+  fOtMaxD = JMap.getFlt(obj, "fOtMaxD", 45.0)
+  fAFMasturbateFol = JMap.getFlt(obj, "fAFMasturbateFol", 0.0)
+  fAFMasturbateNPC = JMap.getFlt(obj, "fAFMasturbateNPC", 10.0)
+  int objArray = JMap.getObj(obj, "iSceneTypeWeight")
+  If(objTags == 0)
+    iSceneTypeWeight = new int[4]
+  Else
+    iSceneTypeWeight = SMMUtility.asJIntArray(objArray)
+  EndIf
+  objArray = JMap.getObj(obj, "bAssaultNPC")
+  If(objTags == 0)
+    bAssaultNPC = new bool[35]
+  Else
+    bAssaultNPC = SMMUtility.asJBoolArray(objArray)
+  EndIf
+  objArray = JMap.getObj(obj, "bAssaultFol")
+  If(objTags == 0)
+    bAssaultFol = new bool[35]
+  Else
+    bAssaultFol = SMMUtility.asJBoolArray(objArray)
+  EndIf
+  iCrtFilterMethod = JMap.getInt(obj, "iCrtFilterMethod", 0)
+  objArray = JMap.getObj(obj, "bValidRace")
+  If(objTags == 0)
+    bValidRace = new bool[52]
+  Else
+    bValidRace = SMMUtility.asJBoolArray(objArray)
+  EndIf
+EndFunction
 
 ; =============================================================
 ; ===================================== REDUNDANT

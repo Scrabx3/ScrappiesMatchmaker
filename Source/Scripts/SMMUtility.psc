@@ -52,3 +52,25 @@ int[] Function asJIntArray(int jObj) global
   EndWhile
   return ret
 EndFunction
+
+String[] Function asJStringArray(int jObj) global
+  int m = JArray.count(jObj)
+  String[] ret = PapyrusUtil.StringArray(m)
+  int i = 0
+  While(i < m)
+    ret[i] = JArray.getStr(jObj, i)
+    i += 1
+  EndWhile
+  return ret
+EndFunction
+
+Bool[] Function asJBoolArray(int jObj) global
+  int m = JArray.count(jObj)
+  Bool[] ret = PapyrusUtil.BoolArray(m)
+  int i = 0
+  While(i < m)
+    ret[i] = JArray.getInt(jObj, i)
+    i += 1
+  EndWhile
+  return ret
+EndFunction
