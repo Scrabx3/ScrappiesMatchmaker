@@ -108,9 +108,11 @@ Event OnUpdate()
   ; Debug.Notification("<SMM> Scanning with Profile: { " + locProfile + " }")
   If(MCM.bPaused || locProfile == "$SMM_Disabled")
     Debug.Trace("[SMM] <Player> Mod Paused or Location disabled")
+    RegisterForSingleUpdate(MCM.iTickInterval)
     return
   ElseIf(UI.IsMenuOpen("Dialogue Menu") || Utility.IsInMenuMode() || !Game.IsLookingControlsEnabled())
     Debug.Trace("[SMM] <Player> Player in Menu")
+    RegisterForSingleUpdate(MCM.iTickInterval)
     return
   EndIf
   ; Get Profile for the current Location
@@ -119,6 +121,7 @@ Event OnUpdate()
   float gh = GameHour.Value
   If(Utility.RandomFloat(0, 99.9) >= JMap.getInt(jProfile, "fEngageChance") || JMap.getInt(jProfile, "bCombatSkip") && PlayerRef.IsInCombat() || JMap.getFlt(jProfile, "fEngageTimeMin") > gh || JMap.getFlt(jProfile, "fEngageTimeMax") < gh)
     Debug.Trace("[SMM] <Player> Invalid System Checks")
+    RegisterForSingleUpdate(MCM.iTickInterval)
     return
   EndIf
   ; Base checks done, Scan for near NPC & hand over to Thread, otherwise register for next Poll
