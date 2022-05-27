@@ -61,8 +61,8 @@ int Function StartAnimation(SMMMCM MCM, Actor victim, Actor[] them, int asVictim
   If(sol != -1 && MCM.bNotifyAF)
     String vicName = victim.GetLeveledActorBase().GetName()
     String otherName = them[0].GetLeveledActorBase().GetName()
-    If(MCM.bNotifyColorAF)
-      Debug.Notification("<font color='" + MCM.sNotifyColorAF + "'>" + vicName + " is being engaged by " + otherName + "</font>")
+    If(MCM.bNotifyColor)
+      Debug.Notification("<font color='" + MCM.sNotifyColor + "'>" + vicName + " is being engaged by " + otherName + "</font>")
     else
       Debug.Notification(vicName + " is being engaged by " + otherName + "</font>")
     EndIf
@@ -104,6 +104,7 @@ bool Function IsAnimating(Actor subject) global
 EndFunction
 
 bool Function StopAnimating(Actor subject) global
+  Debug.Trace("[SMM] Stop Animating for " + subject)
   SMMMCM MCM = SMMUtility.GetMCM()
   If (MCM.bSLAllowed)
     If (SMMAnimationSL.StopAnimating(subject))
