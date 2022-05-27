@@ -53,7 +53,7 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
   ; Get all actors collected by the initial Scan. Assume them to be valid for animation
   Actor[] ColAct = GetActors()
   If(!colAct.Length)
-    Debug.Trace("[SMM] <Scan> No Actors found to match")
+    Debug.Trace("[SMM] <Scan> No Actors to match")
     Stop()
     return
   EndIf
@@ -63,16 +63,16 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
     ; Collect Initiator
     Actor init = GetInitiator(ColAct)
     If(!init)
-      Debug.Trace("[SMM] <Scan> Found no Initiator")
+      Debug.Trace("[SMM] <Scan> No Initiator")
       Stop()
       return
     EndIf
-    Debug.Trace("[SMM] <Scan> Found Initiator: " + init)
+    Debug.Trace("[SMM] <Scan> Initiator = " + init)
     colAct = PapyrusUtil.RemoveActor(colAct, init)
     ; Figure out maximum Number of Partners
     int numPartners = SMMAnimation.GetAllowedParticipants(colAct.Length + 1) - 1
     If(numPartners < 1)
-      Debug.Trace("[SMM] <Scan> Invalid Number of Actors")
+      Debug.Trace("[SMM] <Scan> Invalid Number of Partners")
       If(init != PlayerRef && init.HasKeyword(ActorTypeNPC))
         bool isfollower = init.IsInFaction(PlayerFollowerFaction) || init.IsPlayerTeammate()
         If(isfollower && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateFol || !isfollower && Utility.RandomFloat(0, 99.5) < MCM.fAFMasturbateNPC)
@@ -114,29 +114,24 @@ Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRe
 EndEvent
 
 bool Function ValidMatch(Actor init, Actor partner, int jTmp)
+  ; Distance
   If(partner.GetDistance(init) > JMap.getFlt(jTmp, "fDistance") * 70)
     Debug.Trace("[SMM] <Match> Distance Too Great")
     return false
   EndIf
+  ; Consent
   bool consent = JMap.getInt(jTmp, "bConsent")
   If(JMap.getInt(jTmp, "bLOS") && !(partner.HasLOS(init) || consent && init.HasLOS(partner)))
     Debug.Trace("[SMM] <Match> No LOS")
     return false
   EndIf
-  bool unique = partner.GetLeveledActorBase().IsUnique() && init.GetLeveledActorBase().IsUnique()
-  int dC
-  int dI
-  If(!unique)
-    dC = 0
-    dI = 0
-  Else
-    dC = partner.GetRelationshipRank(init)
-    dI = init.GetRelationshipRank(partner)
-  EndIf
-  If(unique && dC < JMap.getInt(jTmp, "iDisposition") && dI < JMap.getInt(jTmp, "iDisposition"))
+  ; Disposition
+  int disReq = JMap.getInt(jTmp, "iDisposition")
+  If(partner.GetRelationshipRank(init) < disReq || consent && init.GetRelationshipRank(partner) < disReq)
     Debug.Trace("[SMM] <Match> Invalid Disposition")
     return false
   EndIf
+  ; Incest
   int incest = JMap.getInt(jTmp, "lIncest")
   If(incest == 0 && partner.HasFamilyRelationship(init) && !partner.HasAssociation(Spouse, init) || incest == 1 && partner.HasParentRelationship(init))
     Debug.Trace("[SMM] <Match> Invalid Incest")
@@ -448,7 +443,7 @@ Actor[] Function GetActors()
   int i = 0
   While(i < aliases.length)
     Actor subject = (aliases[i] as ReferenceAlias).GetReference() as Actor
-    If(subject && JMap.getFlt(jCooldowns, subject.GetFormID() as String) + (JMap.getFlt(jProfile, "fEngageCooldown") / 24) < GameDaysPassed.Value)
+    If(subject && JMap.getFlt(jCooldowns, subject.GetFormID() as String) + (MCM.fEngageCooldown / 24) < GameDaysPassed.Value)
       bool accept = false
       bool npc = subject.HasKeyword(ActorTypeNPC)
       If(!npc && (!MCM.FrameCreature || !IsValidRace(subject)))
