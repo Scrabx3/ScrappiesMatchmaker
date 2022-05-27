@@ -92,25 +92,10 @@ int Function GetVersion()
 EndFunction
 
 Event OnVersionUpdate(int newVers)
-  If(newVers == 2)
-    iSceneTypeWeight = new int[4]
-    iSceneTypeWeight[0] = 75 
-    iSceneTypeWeight[1] = 60
-    iSceneTypeWeight[2] = 35
-    iSceneTypeWeight[3] = 20
-  ElseIf(newVers == 3)
-    SLTags = new String[6]
-  EndIf
-  If(newVers == GetVersion())
-    LoadMCM()
-  EndIf
+  OnConfigInit()
 EndEvent
 
 Event OnConfigInit()
-  Initialize()
-EndEvent
-
-Function Initialize()
   Pages = new string[7]
   Pages[0] = "$SMM_General"
   Pages[1] = "$SMM_Locs"
@@ -181,9 +166,14 @@ Function Initialize()
     i += 1
   EndWhile
 
-  ; SLTags = new String[11]
+  iSceneTypeWeight = new int[4]
+  iSceneTypeWeight[0] = 75 
+  iSceneTypeWeight[1] = 60
+  iSceneTypeWeight[2] = 35
+  iSceneTypeWeight[3] = 20
+  SLTags = new String[6]
   bValidRace = new bool[52]
-EndFunction
+EndEvent
 
 ; ===============================================================
 ; =============================  MENU
@@ -213,9 +203,10 @@ Event OnPageReset(string Page)
 		AddToggleOptionST("afNotify", "$SMM_EngageNotify", bNotifyAF)
 		AddToggleOptionST("notifycolored", "$SMM_EngageNotifyColor", bNotifyColor, getFlag(bNotifyAF))
     AddColorOptionST("notifycolorchoice", "$SMM_EngageNofityColorChoice", iNotifyColor, getFlag(bNotifyAF && bNotifyColor))
-    SetCursorPosition(19) ; 23 is bottom right without scrolling
+    SetCursorPosition(17) ; 23 is bottom right without scrolling
     AddHeaderOption("$SMM_Debug")
     AddTextOptionST("shutdownThreads", "$SMM_ShutDown", "")
+    AddTextOptionST("savemcm", "$SMM_Save", "")
     AddTextOptionST("loadmcm", "$SMM_Load", "")
 
   ElseIf(Page == "$SMM_Locs")
@@ -442,7 +433,6 @@ Event OnConfigClose()
     SaveJson()
   EndIf
   JValue.releaseObjectsWithTag("SMM")
-  SaveMCM()
 EndEvent
 
 ; ===============================================================
@@ -467,8 +457,12 @@ Event OnSelectST()
 		bNotifyColor = !bNotifyColor
 		SetToggleOptionValueST(bNotifyColor)
 		SetOptionFlagsST(getFlag(bNotifyAF && bNotifyColor), false, "notifycolorchoice")
+  ElseIf(option[0] == "savemcm")
+    SaveMCM()
+    ShowMessage("$SMM_Done", false, "$SMM_Ok")
   ElseIf(option[0] == "loadmcm")
     LoadMCM()
+    ShowMessage("$SMM_Done", false, "$SMM_Ok")
     ForcePageReset()
 
   ElseIf(option[0] == "considerFollower")  ; Profiles
