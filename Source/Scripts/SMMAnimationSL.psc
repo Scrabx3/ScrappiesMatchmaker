@@ -23,35 +23,80 @@ int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] partners, int asVic
   If(asVictim == 1)
     victim = first
   EndIf
-  Actor[] others = SL.SortActors(PapyrusUtil.PushActor(partners, first))
-  int fg = SL.GetGender(first)
+  Actor[] positions = PapyrusUtil.PushActor(partners, first)
+  int vpos = positions.find(victim)
+  int[] genders = Utility.CreateIntArray(positions.length)
+  int i = 0
+  While(i < genders.length)
+    genders[i] = SL.GetGender(positions[i])
+    i += 1
+  EndWhile
   sslBaseAnimation[] anims
 	bool breakLoop = false
 	While(!breakLoop)
-		If(fg > 1) ; Creature
-	    anims = SL.GetAnimationsByTags(others.length, MCM.SLTags[10])
-	  ElseIf(others.length == 2)
-	    int males = SL.MaleCount(others)
-	    If(fg == 1 && males > 0) ; Female first & Male Partner
-	      anims = SL.GetAnimationsByTags(others.length, MCM.SLTags[0])
-	    else ; male count is now 0 for lesbian; 2 for gay or 1 for male first & female partner
-	      anims = SL.GetAnimationsByTags(others.length, MCM.SLTags[males + 1])
-	    EndIf
-	  else ; Array Entry (4/5) for 3, (6/7) for 4 or (8/9) for 5
-	    anims = SL.GetAnimationsByTags(others.length, MCM.SLTags[(others.length * 2) - (1 + fg)])
+    bool creatures = genders.find(3) > -1 || genders.find(4) > -1
+    int n
+    If(positions.length == 2 && !creatures)
+	    int males = SL.MaleCount(positions)
+	    If(genders[0] == 1 && males == 1) ; F<-M
+        n = 0
+      Else ; F<-F // M<-F // M<-M
+        n = 1 + males
+      EndIf
+	  Else
+      If(genders[0] == 0 || victim && SL.GetGender(victim) == 0)
+        n = 4
+      Else
+        n = 5
+      EndIf
 	  EndIf
+    String[] tags = GetTags(MCM.SLTags[n])
+    If (creatures)
+      anims = SL.GetCreatureAnimationsByRaceTags(positions.Length, positions[positions.Length - 1].GetRace(), tags[0], tags[1])
+    Else
+      anims = SL.GetAnimationsByTags(positions.length, tags[0], tags[1])
+    EndIf
 		If(anims.Length)
+      Debug.Trace("[Kudasai] Found Animations = " + anims.Length)
 			breakLoop = true
-		ElseIf(others.length < 2)
-			return -1
-		else
-			others = PapyrusUtil.RemoveActor(others, others[0])
-		EndIf
+		Else
+      If(positions.length <= 2) ; Didnt find an animation with 2 or less actors
+        Debug.Trace("[Kudasai] No Animations found", 2)
+        return -1
+      EndIf
+      Debug.Trace("[Kudasai] No Animations found, reducing Array size from size = " + positions.length)
+      int j = positions.Length
+      While(j > 0)
+        j -= 1
+        If(positions[j] != victim)
+          positions = PapyrusUtil.RemoveActor(positions, positions[j])
+          genders = Utility.CreateIntArray(positions.length)
+          int k = 0
+          While(k < genders.length)
+            genders[k] = SL.GetGender(positions[k])
+            k += 1
+          EndWhile
+        EndIf
+      EndWhile
+    EndIf
 	EndWhile
-  ; Start Scene
-  return SL.StartSex(others, anims, victim, hook = hook)
+  return SL.StartSex(positions, anims, victim, hook = hook)
 EndFunction
 
+String[] Function GetTags(String str) global
+  String[] all = PapyrusUtil.StringSplit(str, ",")
+  String[] res = new String[2]
+  int i = 0
+  While(i < all.Length)
+    If(StringUtil.GetNthChar(all[i], 0) == "-")
+      res[1] = res[1] + (StringUtil.Substring(all[i], 1) + ",")
+    Else
+      res[0] = res[0] + all[i]
+    EndIf
+    i += 1
+  EndWhile
+  return res
+EndFunction
 
 int Function GetActorType(Actor subject) global
   SexLabFramework SL = SexLabUtil.GetAPI()

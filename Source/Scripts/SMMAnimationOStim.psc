@@ -21,7 +21,7 @@ int Function StartScene(SMMMCM MCM, Actor first, Actor[] others, int asVictim) g
     OStim.AddSceneMetadata("or_npc_nocheat")
   EndIf
   If(hasPlayer)
-    If(OStim.StartScene(others[0], first, false, true, false, zThirdActor = third, aggressive = asVictim, AggressingActor = others[0]))
+    If(OStim.StartScene(others[0], first, false, false, false, zThirdActor = third, aggressive = asVictim, AggressingActor = others[0]))
       return 0
     EndIf
   else
@@ -62,6 +62,7 @@ EndFunction
 bool Function StopAnimating(Actor subject) global
   OSexIntegrationMain OStim = OUtils.GetOStim()
   If (!Ostim.isactoractive(subject))
+    Debug.Trace("[SMM] Actor is not animating")
     return false
   ElseIf (Ostim.IsActorInvolved(subject))
     OStim.EndAnimation()
