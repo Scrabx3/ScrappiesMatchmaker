@@ -1272,11 +1272,11 @@ Function SaveMCM()
   JMap.setObj(obj, "bAssaultFol", JArray.objectWithBooleans(bAssaultFol))
   JMap.setInt(obj, "iCrtFilterMethod", iCrtFilterMethod)
   JMap.setObj(obj, "JbValidRace", JArray.objectWithBooleans(bValidRace))
-  JValue.writeToFile(obj, filePath + "MCM.json")
+  JValue.writeToFile(obj, filePath + "MCM\\MCM.json")
 EndFunction
 
 Function LoadMCM()
-  int obj = JValue.readFromFile(filePath + "MCM.json")
+  int obj = JValue.readFromFile(filePath + "MCM\\MCM.json")
   If(obj == 0)
     return
   EndIf
@@ -1319,26 +1319,26 @@ Function LoadMCM()
   fAFMasturbateFol = JMap.getFlt(obj, "fAFMasturbateFol", 0.0)
   fAFMasturbateNPC = JMap.getFlt(obj, "fAFMasturbateNPC", 10.0)
   int objArray = JMap.getObj(obj, "iSceneTypeWeight")
-  If(objTags == 0)
+  If(objArray == 0)
     iSceneTypeWeight = new int[4]
   Else
     iSceneTypeWeight = SMMUtility.asJIntArray(objArray)
   EndIf
   objArray = JMap.getObj(obj, "bAssaultNPC")
-  If(objTags == 0)
+  If(objArray == 0)
     bAssaultNPC = new bool[35]
   Else
     bAssaultNPC = SMMUtility.asJBoolArray(objArray)
   EndIf
   objArray = JMap.getObj(obj, "bAssaultFol")
-  If(objTags == 0)
+  If(objArray == 0)
     bAssaultFol = new bool[35]
   Else
     bAssaultFol = SMMUtility.asJBoolArray(objArray)
   EndIf
   iCrtFilterMethod = JMap.getInt(obj, "iCrtFilterMethod", 0)
   objArray = JMap.getObj(obj, "bValidRace")
-  If(objTags == 0)
+  If(objArray == 0)
     bValidRace = new bool[52]
   Else
     bValidRace = SMMUtility.asJBoolArray(objArray)
