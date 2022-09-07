@@ -153,7 +153,7 @@ Function PostScene(int ID)
       n += 1
     EndWhile
     ; Update Partner Array
-    int maxPartners = SMMAnimation.GetAllowedParticipants(5)
+    int maxPartners = SMMAnimation.GetAllowedParticipants(5) - 1
     If(maxPartners != partners.Length)
       ; If we got more Partners than currently allowed, remove the ones too much
       If(maxPartners < partners.Length)
