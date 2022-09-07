@@ -210,9 +210,14 @@ EndEvent
 
 Event SuspendMod(string asEventName, string asStringArg, float afNumArg, form akSender)
   MCM.bPaused = true
+  GoToState("Suspended")
+EndEvent
+Event ResumeMod(string asEventName, string asStringArg, float afNumArg, form akSender)
 EndEvent
 
-Event ResumeMod(string asEventName, string asStringArg, float afNumArg, form akSender)
-  MCM.bPaused = false
-  RegisterForSingleUpdate(MCM.iTickInterval)
-EndEvent
+State Suspended
+  Event ResumeMod(string asEventName, string asStringArg, float afNumArg, form akSender)
+    MCM.bPaused = false
+    RegisterForSingleUpdate(MCM.iTickInterval)
+  EndEvent
+EndState
