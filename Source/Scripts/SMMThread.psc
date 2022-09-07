@@ -115,7 +115,7 @@ int scenesPlayed
 String hook
 
 Function StartAnimation()
-  If(SMMAnimation.StartAnimation(MCM, init, partners, Math.abs(consent - 1) as int, hook) == -1)
+  If(SMMAnimation.StartAnimation(MCM, init, partners, (1 - consent), hook) == -1)
     Debug.Trace("[SMM] " + self + " Failed to Start 2p+ Animation " + scenesPlayed + " | Initiator: " + init)
     Stop()
     return
@@ -224,6 +224,7 @@ EndFunction
 
 Function CleanUp()
   Debug.Trace("[SMM] " + Self + " Thread Stopped with Initiator: " + init + " (" + init.GetLeveledActorBase().GetName() + ")")
+  SMMAnimation.StopAnimating(init)
   If(init == Game.GetPlayer())
     Game.SetPlayerAIDriven(false)
   Else
@@ -243,5 +244,8 @@ Function CleanUp()
   jProfile = JValue.release(jProfile)
 EndFunction
 Actor Function GetInit()
+  If(!partners.Length)
+    return none
+  EndIf
   return partners[0]
 EndFunction

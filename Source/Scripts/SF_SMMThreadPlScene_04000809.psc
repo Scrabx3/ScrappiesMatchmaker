@@ -10,19 +10,6 @@ Function Fragment_1()
 EndFunction
 ;END FRAGMENT
 
-;BEGIN FRAGMENT Fragment_2
-Function Fragment_2()
-;BEGIN CODE
-SMMThread t = GetOwningQuest() as SMMThread
-If(t.consent == 0)
-  reached = true
-  t.StartScene()
-	UnregisterForUpdate()
-EndIf
-;END CODE
-EndFunction
-;END FRAGMENT
-
 ;BEGIN FRAGMENT Fragment_3
 Function Fragment_3()
 ;BEGIN CODE
@@ -36,6 +23,19 @@ If(t.consent == 0)
 			Debug.Notification("You get the feeling as if someone is lurking up to you")
 		EndIf
   EndIf
+EndIf
+;END CODE
+EndFunction
+;END FRAGMENT
+
+;BEGIN FRAGMENT Fragment_2
+Function Fragment_2()
+;BEGIN CODE
+SMMThread t = GetOwningQuest() as SMMThread
+If(t.consent == 0)
+  reached = true
+  t.StartScene()
+	UnregisterForUpdate()
 EndIf
 ;END CODE
 EndFunction
