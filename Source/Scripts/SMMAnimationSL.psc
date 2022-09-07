@@ -24,7 +24,8 @@ int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] partners, int asVic
     victim = first
   EndIf
   Actor[] positions = PapyrusUtil.PushActor(partners, first)
-  int vpos = positions.find(victim)
+  positions[positions.Length - 1] = positions[0]
+  positions[0] = first
   int[] genders = Utility.CreateIntArray(positions.length)
   int i = 0
   While(i < genders.length)
@@ -91,7 +92,7 @@ String[] Function GetTags(String str) global
     If(StringUtil.GetNthChar(all[i], 0) == "-")
       res[1] = res[1] + (StringUtil.Substring(all[i], 1) + ",")
     Else
-      res[0] = res[0] + all[i]
+      res[0] = res[0] + all[i] + ","
     EndIf
     i += 1
   EndWhile
