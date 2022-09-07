@@ -900,6 +900,9 @@ Event OnMenuOpenST()
 EndEvent
 
 Event OnMenuAcceptST(Int aiIndex)
+  If(aiIndex == -1)
+    return
+  EndIf
   String[] option = PapyrusUtil.StringSplit(GetState(), "_")
   If(option[0] == "consider") ; Profiles
     JMap.setInt(jProfile, "lConsider", aiIndex)
@@ -1157,6 +1160,9 @@ EndState
 ; =============================  PROFILE SYSTEM
 ; ===============================================================
 Function SaveJson()
+  If(!smmProfiles.Length || smmProfiles.Length <= smmProfileIndex)
+    return
+  EndIf
   JValue.writeToFile(jProfile, filePath + smmProfiles[smmProfileIndex] + ".json")
   jProfile = JValue.release(jProfile)
 EndFunction
@@ -1197,7 +1203,7 @@ State smmProfilesAdd
         return
       EndIf
     EndIf
-    SaveJson()
+    SaveJson()  ; Save potential changes to the currently slected json
     int newFile = JValue.readFromFile(filePath + "Definition\\Definition.json")
     JValue.writeToFile(JValue.zeroLifetime(newFile), filePath + a_input)
     CreateMenuProfiles()
@@ -1209,16 +1215,18 @@ EndState
 State smmProfilesLoad
   Event OnMenuOpenST()
     SetMenuDialogStartIndex(smmProfileIndex)
-    SetMenuDialogDefaultIndex(1)
+    SetMenuDialogDefaultIndex(0)
     SetMenuDialogOptions(smmProfiles)
   EndEvent
   Event OnMenuAcceptST(Int aiIndex)
     SaveJson()
-    smmProfileIndex = aiIndex
-    ForcePageReset()
+    If(aiIndex != -1)
+      smmProfileIndex = aiIndex
+      ForcePageReset() 
+    EndIf
   EndEvent
   Event OnDefaultST()
-    smmProfileIndex = 1
+    smmProfileIndex = 0
     ForcePageReset()
   EndEvent
   Event OnHighlightST()
