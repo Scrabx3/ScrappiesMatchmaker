@@ -242,6 +242,10 @@ bool Function AdvCon(Actor that, int i)
   ElseIf(i == 9)
     return that.GetActorValuePercentage("Stamina") < JMap.getFlt(jProfile, "rStaminaThresh") || that.GetActorValuePercentage("Magicka") < JMap.getFlt(jProfile, "rMagickaThresh")
   ElseIf(i == 10)
+    If(Game.GetModByName("YameteKudasai.esp") != 255)
+      return SMMYameteKudasai.IsActorDefeated(that)
+    EndIf
+  ElseIf(i == 11)
     bool b = false
     If(zad_Lockable != none)
       b = that.WornHasKeyword(zad_Lockable)
@@ -253,7 +257,7 @@ bool Function AdvCon(Actor that, int i)
       b = that.WornHasKeyword(ToysToy)
     EndIf
     return b
-  ElseIf(i == 11)
+  ElseIf(i == 12)
     bool b = false
     If(zad_Lockable != none)
       b = that.WornHasKeyword(zad_DeviousHeavyBondage)
@@ -265,7 +269,7 @@ bool Function AdvCon(Actor that, int i)
       b = that.WornHasKeyword(ToysEffect_ArmBind) || that.WornHasKeyword(ToysEffect_YokeBind)
     EndIf
     return b
-  ElseIf(i == 12)
+  ElseIf(i == 13)
     bool b = false
     If(zad_Lockable != none)
       b = that.WornHasKeyword(zad_DeviousCollar)

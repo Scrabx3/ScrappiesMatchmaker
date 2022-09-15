@@ -680,7 +680,6 @@ Event OnSliderOpenST()
     SetSliderDialogDefaultValue(40)
     SetSliderDialogRange(0, 100)
     SetSliderDialogInterval(1)
-    
   ElseIf(option[0] == "TMaxRounds") ; Threading
     SetSliderDialogStartValue(iResMaxRounds)
     SetSliderDialogDefaultValue(4)
