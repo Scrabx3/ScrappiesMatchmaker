@@ -87,6 +87,9 @@ Event OnPlayerLoadGame()
 EndEvent
 
 Event OnKeyDown(int keyCode)
+  If(Utility.IsInMenuMode())
+		return
+  EndIf
   MCM.bPaused = !MCM.bPaused
   If(MCM.bPaused)
     Debug.Notification("ScRappies Matchmaker paused")
@@ -219,5 +222,6 @@ State Suspended
   Event ResumeMod(string asEventName, string asStringArg, float afNumArg, form akSender)
     MCM.bPaused = false
     RegisterForSingleUpdate(MCM.iTickInterval)
+    GoToState("")
   EndEvent
 EndState
