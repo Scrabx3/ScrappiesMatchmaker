@@ -1279,11 +1279,11 @@ Function SaveMCM()
   JMap.setObj(obj, "bAssaultFol", JArray.objectWithBooleans(bAssaultFol))
   JMap.setInt(obj, "iCrtFilterMethod", iCrtFilterMethod)
   JMap.setObj(obj, "JbValidRace", JArray.objectWithBooleans(bValidRace))
-  JValue.writeToFile(obj, filePath + "MCM\\MCM.json")
+  JValue.writeToFile(obj, filePath + "Definition\\MCM.json")
 EndFunction
 
 Function LoadMCM()
-  int obj = JValue.readFromFile(filePath + "MCM\\MCM.json")
+  int obj = JValue.readFromFile(filePath + "Definition\\MCM.json")
   If(obj == 0)
     return
   EndIf
