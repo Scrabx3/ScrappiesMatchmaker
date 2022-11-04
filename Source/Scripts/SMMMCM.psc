@@ -297,7 +297,7 @@ Event OnPageReset(string Page)
       EndWhile
     Else ; Chance (or none)
       AddSliderOptionST("chanceBase", classColors[3] + "$SMM_BaseChance", JMap.getInt(jProfile, "cBaseChance"), "{1}%", getFlag(aca == 1))
-      int[] c = SMMUtility.asJIntArray(JMap.getObj(jProfile, "reqAPoints"))
+      int[] c = SMMUtility.asJIntArray(JMap.getObj(jProfile, "cAChances"))
       While(i < c.Length)
         AddSliderOptionST("aChances_" + i, "$SMM_AdvCon_" + i, c[i], "{1}%", getFlag(aca == 1))
         If(i == 6)
@@ -966,7 +966,7 @@ EndEvent
 Event OnHighlightST()
   String[] option = PapyrusUtil.StringSplit(GetState(), "_")
   If(option[0] == "TickInterval") ; General
-    SetInfoText("SMM_IntervalHighlight")
+    SetInfoText("$SMM_IntervalHighlight")
   ElseIf(option[0] == "LocScan")
     SetInfoText("$SMM_LocScanHighlight")
   ElseIf(option[0] == "ScanRadius")
@@ -1125,7 +1125,7 @@ State PauseKey
     PlayerScr.ResetKey(iPauseKey)
   EndEvent
   Event OnHighlightST()
-    SetInfoText("SMM_PauseHotkeyHighlight")
+    SetInfoText("$SMM_PauseHotkeyHighlight")
   EndEvent
 EndState
 
