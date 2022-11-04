@@ -21,7 +21,7 @@ String Property filePathCooldown = "Data\\SKSE\\SMM\\Definition\\Cooldowns.json"
 ; ============================================ START UP
 ; ========================================================================
 Event OnStoryScript(Keyword akKeyword, Location akLocation, ObjectReference akRef1, ObjectReference akRef2, int aiValue1, int aiValue2)
-  jCooldown = JValue.retain(JValue.readFromFile(filePathCooldown))
+  jCooldown = JValue.retain(JMap.object())
   init = akRef1 as Actor
   jActors = aiValue1
   jProfile = JValue.retain(aiValue2)
@@ -238,10 +238,12 @@ Function CleanUp()
     JMap.setFlt(jCooldown, partners[i].GetFormID(), Scan.GameDaysPassed.Value)
     i += 1
   EndWhile
+  int jCdFile = JValue.readFromFile(filePathCooldown)
+  JMap.addPairs(jCdFile, jCooldown, true)
   JValue.writeToFile(jCooldown, filePathCooldown)
-  jCooldown = JValue.release(jCooldown)
   jActors = JValue.release(jActors)
   jProfile = JValue.release(jProfile)
+  jCooldown = JValue.release(jCooldown)
 EndFunction
 Actor Function GetInit()
   If(!partners.Length)
