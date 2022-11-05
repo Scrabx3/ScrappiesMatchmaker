@@ -230,8 +230,5 @@ Function CleanUp()
   jCooldown = JValue.release(jCooldown)
 EndFunction
 Actor Function GetInit()
-  If(!partners.Length)
-    return none
-  EndIf
-  return partners[0]
+  return init
 EndFunction
