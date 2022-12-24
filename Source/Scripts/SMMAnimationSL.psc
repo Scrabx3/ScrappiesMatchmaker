@@ -35,7 +35,7 @@ int Function StartAnimation(SMMMCM MCM, Actor first, Actor[] partners, int asVic
   sslBaseAnimation[] anims
 	bool breakLoop = false
 	While(!breakLoop)
-    bool creatures = genders.find(3) > -1 || genders.find(4) > -1
+    bool creatures = genders.find(2) > -1 || genders.find(3) > -1
     int n
     If(positions.length == 2 && !creatures)
 	    int males = SL.MaleCount(positions)
@@ -99,12 +99,13 @@ String[] Function GetTags(String str) global
   return res
 EndFunction
 
+; 0 - Male | 1 - Female | (2 - Futa) | 3 - M Crt | 4 - F Crt
 int Function GetActorType(Actor subject) global
   SexLabFramework SL = SexLabUtil.GetAPI()
   int sex = SL.GetGender(subject)
-  If (sex > 2)
+  If (sex >= 2)
     sex += 1
-  ElseIf (sex == 2)
+  ElseIf (sex == 1)
     If(Game.GetModByName("Schlongs of Skyrim.esp") != 255)
       Faction schlongified = Game.GetFormFromFile(0x00AFF8, "Schlongs of Skyrim.esp") as Faction
       sex += subject.IsInFaction(schlongified) as int

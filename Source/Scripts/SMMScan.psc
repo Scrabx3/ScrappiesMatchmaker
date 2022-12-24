@@ -368,7 +368,7 @@ EndFunction
 ;0 - Male, 1 - Female, 2 - Futa, 3 - Male Creature, 4 - Female Creature
 int Function GetActorType(Actor me)
   If(MCM.bSLAllowed)
-    return SMMAnimationSL.getActorType(me)
+    return SMMAnimationSL.GetActorType(me)
   else
     If(me.HasKeyword(ActorTypeNPC))
       return me.GetLeveledActorBase().GetSex()
