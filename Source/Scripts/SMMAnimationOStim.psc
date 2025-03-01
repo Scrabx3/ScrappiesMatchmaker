@@ -26,8 +26,7 @@ int Function StartScene(SMMMCM MCM, Actor first, Actor[] others, int asVictim) g
     EndIf
   else
     OStimSubthread st = OStim.GetUnusedSubthread()
-    float timer = Utility.RandomFloat(MCM.fOtMinD, MCM.fOtMaxD)
-    If(st.StartScene(others[0], first, third, timer, isaggressive = asVictim, aggressingActor = others[0]))
+    If(st.StartScene(others[0], first, third, 30.0, isaggressive = asVictim, aggressingActor = others[0]))
       return 1
     EndIf
   EndIf

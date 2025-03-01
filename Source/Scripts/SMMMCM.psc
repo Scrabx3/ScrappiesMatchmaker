@@ -56,9 +56,6 @@ bool Property bBestiality = false Auto Hidden
 bool Property bSupportFilter = false Auto Hidden
 String[] Property SLTags Auto Hidden
 {F<-M // M<-M // M<-F // F<-F // M<-* // F<-*}
-; OStim
-float Property fOtMinD = 30.0 Auto Hidden
-float Property fOtMaxD = 45.0 Auto Hidden
 ; 3p+ Weights
 float Property fAFMasturbateFol = 0.0 Auto Hidden
 float Property fAFMasturbateNPC = 10.0 Auto Hidden
@@ -368,17 +365,13 @@ Event OnPageReset(string Page)
 		SetCursorPosition(1)
 		AddToggleOptionST("SLSupportFilter", "$SMM_SLFilterOption", bSupportFilter, getFlag(SLThere))
 		AddHeaderOption("$SMM_afFrameSexLab")
-		AddToggleOptionST("SupBestiality", "$SMM_SupBestiality", bBestiality, getFlag(SLThere))
-		AddEmptyOption()
 		AddTextOptionST("SLTaggingReadMe", "", "$SMM_Help", getFlag(SLThere))
+		AddToggleOptionST("SupBestiality", "$SMM_SupBestiality", bBestiality, getFlag(SLThere))
 		int i = 0
 		While(i < SLTags.length)
 			AddInputOptionST("SLTag_" + i, "$SMM_SLTags_" + i, SLTags[i], getFlag(SLThere))
 			i += 1
 		EndWhile
-		AddHeaderOption("$SMM_afFrameOStim")
-		AddSliderOptionST("ostimMinD", "$SMM_afOStimMinDur", fOtMinD, "{0}s", getFlag(OStimThere))
-		AddSliderOptionST("ostimMaxD", "$SMM_afOStimMaxDur", fOtMaxD, "{0}s", getFlag(OStimThere))
 
   ElseIf(Page == "$SMM_Filter")
     int i = 0
@@ -706,17 +699,7 @@ Event OnSliderOpenST()
     SetSliderDialogRange(0, 100)
     SetSliderDialogInterval(0.1)
 
-	ElseIf(option[0] == "ostimMinD")  ; Animation Frame
-		SetSliderDialogStartValue(fOtMinD)
-		SetSliderDialogDefaultValue(30)
-		SetSliderDialogRange(10, fOtMaxD)
-		SetSliderDialogInterval(5)
-	ElseIf(option[0] == "ostimMaxD")
-		SetSliderDialogStartValue(fOtMaxD)
-		SetSliderDialogDefaultValue(45)
-		SetSliderDialogRange(fOtMinD, 180)
-		SetSliderDialogInterval(5)
-	ElseIf(option[0] == "scenetype")
+	ElseIf(option[0] == "scenetype")  ; Animation Frame
     int i = option[1] as int
 		SetSliderDialogStartValue(iSceneTypeWeight[i])
 		SetSliderDialogDefaultValue(50)
@@ -833,13 +816,7 @@ Event OnSliderAcceptST(Float afValue)
 		fSpecChance = afValue
 		SetSliderOptionValueST(fSpecChance, "{1}%")    
 
-	ElseIf(option[0] == "ostimMinD") ; Animation Frame
-		fOtMinD = afValue
-		SetSliderOptionValueST(fOtMinD, "{0}s")
-	ElseIf(option[0] == "ostimMaxD")
-		fOtMaxD = afValue
-		SetSliderOptionValueST(fOtMaxD, "{0}s")
-	ElseIf(option[0] == "af1pWeightFol")
+	ElseIf(option[0] == "af1pWeightFol")  ; Animation Frame
 		fAFMasturbateFol = afValue
 		SetSliderOptionValueST(fAFMasturbateFol, "{1}%")
 	ElseIf(option[0] == "af1pWeightNPC")
@@ -1270,8 +1247,6 @@ Function SaveMCM()
   JMap.setInt(obj, "bBestiality", bBestiality as int)
   JMap.setInt(obj, "bSupportFilter", bSupportFilter as int)
   JMap.setObj(obj, "SLTags", JArray.objectWithStrings(SLTags))
-  JMap.setFlt(obj, "fOtMinD", fOtMinD)
-  JMap.setFlt(obj, "fOtMaxD", fOtMaxD)
   JMap.setFlt(obj, "fAFMasturbateFol", fAFMasturbateFol)
   JMap.setFlt(obj, "fAFMasturbateNPC", fAFMasturbateNPC)
   JMap.setObj(obj, "iSceneTypeWeight", JArray.objectWithInts(iSceneTypeWeight))
@@ -1321,8 +1296,6 @@ Function LoadMCM()
   Else
     SLTags = SMMUtility.asJStringArray(objTags)
   EndIf
-  fOtMinD = JMap.getFlt(obj, "fOtMinD", 30.0)
-  fOtMaxD = JMap.getFlt(obj, "fOtMaxD", 45.0)
   fAFMasturbateFol = JMap.getFlt(obj, "fAFMasturbateFol", 0.0)
   fAFMasturbateNPC = JMap.getFlt(obj, "fAFMasturbateNPC", 10.0)
   int objArray = JMap.getObj(obj, "iSceneTypeWeight")
