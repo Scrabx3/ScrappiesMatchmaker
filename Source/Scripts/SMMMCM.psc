@@ -49,7 +49,6 @@ bool Property bSpecCrt = false Auto Hidden
 
 ; --- Adult Frames
 bool Property bSLAllowed = true Auto Hidden Conditional
-bool Property bOStimAllowed = true Auto Hidden Conditional
 bool Property bCrtOnly = false Auto Hidden
 ; SexLab
 bool Property bBestiality = false Auto Hidden
@@ -60,17 +59,6 @@ String[] Property SLTags Auto Hidden
 float Property fAFMasturbateFol = 0.0 Auto Hidden
 float Property fAFMasturbateNPC = 10.0 Auto Hidden
 int[] Property iSceneTypeWeight Auto Hidden
-; Utility
-bool Property FrameCreature
-	bool Function Get()
-		return bSLAllowed
-	EndFunction
-EndProperty
-bool Property FrameAny
-	bool Function Get()
-		return bSLAllowed || bOStimAllowed
-	EndFunction
-EndProperty
 
 ; --- Filterr
 bool[] Property bAssaultNPC Auto Hidden
@@ -345,12 +333,7 @@ Event OnPageReset(string Page)
 
 	ElseIf(Page == "$SMM_AnimFrame")
 		bool SLThere = Game.GetModByName("SexLab.esm") != 255
-		bool OStimThere = Game.GetModByName("OStim.esp") != 255
-		AddHeaderOption("$SMM_afFramesLoaded")
-		AddToggleOptionST("SLAllowed", "$SMM_afFrameSexLab", bSLAllowed, getFlag(SLThere))
-		AddToggleOptionST("OStimAllowed", "$SMM_afFrameOStim", bOStimAllowed, getFlag(OStimThere))
-		AddEmptyOption()
-		AddToggleOptionST("SLCrtOnly", "$SMM_afFrameSexLabCrtOnly", bCrtOnly, getFlag(SLThere && OStimThere))
+		AddToggleOptionST("SLAllowed", "$SMM_afFrameSexLab", bSLAllowed, OPTION_FLAG_DISABLED)
 		AddHeaderOption("$SMM_Solo")
 		AddSliderOptionST("af1pWeightFol", "$SMM_af1pWeightFol", fAFMasturbateFol, "{0}%")
 		AddSliderOptionST("af1pWeightNPC", "$SMM_af1pWeightNPC", fAFMasturbateNPC, "{0}%")
@@ -358,7 +341,7 @@ Event OnPageReset(string Page)
     AddHeaderOption("$SMM_SceneTypes")
     int n = 0
     While(n < iSceneTypeWeight.Length)
-      AddSliderOptionST("scenetype_" + n, "$SMM_SceneType_" + n, iSceneTypeWeight[n], "{0}", getFlag(SLThere || OStimThere))
+      AddSliderOptionST("scenetype_" + n, "$SMM_SceneType_" + n, iSceneTypeWeight[n], "{0}", getFlag(SLThere))
       n += 1
     EndWhile
 		; ===============================================
@@ -507,12 +490,6 @@ Event OnSelectST()
   ElseIf(option[0] == "SupBestiality")
     bBestiality = !bBestiality
     SetToggleOptionValueST(bBestiality)
-	ElseIf(option[0] == "SLAllowed")
-		bSLAllowed = !bSLAllowed
-		SetToggleOptionValueST(bSLAllowed)
-	ElseIf(option[0] == "OStimAllowed")
-		bOStimAllowed = !bOStimAllowed
-		SetToggleOptionValueST(bOStimAllowed)
   ElseIf(option[0] == "SLCrtOnly")
     bCrtOnly = !bCrtOnly
     SetToggleOptionValueST(bCrtOnly)
@@ -1039,18 +1016,10 @@ Event OnHighlightST()
   ElseIf(option[0] == "SpecCrt")
 		SetInfoText("$SMM_SpectatorCreatureHighlight")
 
-  ElseIf(option[0] == "SLAllowed")  ; Anim Frames
-		SetInfoText("$SMM_afFrameSexLabHighlight")
-	ElseIf(option[0] == "OStimAllowed")
-		SetInfoText("$SMM_afFrameOStimHighlight")
-	ElseIf(option[0] == "SLCrtOnly")
-		SetInfoText("$SMM_afFrameSexLabCrtOnlyHighlight")
-	ElseIf(option[0] == "SLTreatVictim")
+	ElseIf(option[0] == "SLTreatVictim") ; Anim Frames
 		SetInfoText("$SMM_SLTreatVictimHighlight")
 	ElseIf(option[0] == "SLSupportFilter")
 		SetInfoText("$SMM_SLFilterOptionHighlight")
-	ElseIf(option[0] == "ostimMinD" || option[0] == "ostimMaxD")
-		SetInfoText("$SMM_afOStimMinMaxDurHighlight")
   ElseIf(option[0] == "af1pWeightFol" || option[0] == "af1pWeightNPC")
     SetInfoText("$SMM_af1pWeightHighlight")
 

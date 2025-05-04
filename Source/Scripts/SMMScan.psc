@@ -159,17 +159,13 @@ EndFunction
 bool Function ValidInitiator(Actor that)
   Debug.Trace("[SMM] Checking Initiator: " + that + " (" + that.GetLeveledActorBase().GetName() + ")")
   If(that != PlayerRef)
-    ; ORomance check..
-    If(MCM.bOStimAllowed && JMap.getInt(jProfile, "bConsent") && SMMAnimationOStim.IsPlayerPartner(that))
-      return false
-    EndIf
     bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
     int jTmp = JMap.getObj(jProfile, "bGenderInit")
     If(that != PlayerRef && (fol && !JArray.getInt(jTmp, 0) || !fol && !JArray.getInt(jTmp, GetActorType(that) + 1)))
       Debug.Trace("[SMM] Invalid Initiator Gender")
       return false
     EndIf
-  EndIf  
+  EndIf
   bool ret
   int alg = JMap.getInt(jProfile, "lAdvInit", 0)
   If(alg != 0)
@@ -288,9 +284,6 @@ EndFunction
 ; =============================  PARTNER
 ; ===============================================================
 bool Function ValidPartner(Actor that, int jTmp)
-  If(MCM.bOStimAllowed && SMMAnimationOStim.IsPlayerPartner(that))
-    return false
-  EndIf
   bool fol = that.IsInFaction(PlayerFollowerFaction) || that.IsPlayerTeammate()
   int j = JMap.getObj(jTmp, "bGenderPartner")
   If(fol && !JArray.getInt(j, 0) || !fol && !JArray.getInt(j, GetActorType(that) + 1))
@@ -367,15 +360,7 @@ EndFunction
 ; ===============================================================
 ;0 - Male, 1 - Female, 2 - Futa, 3 - Male Creature, 4 - Female Creature
 int Function GetActorType(Actor me)
-  If(MCM.bSLAllowed)
-    return SMMAnimationSL.GetActorType(me)
-  else
-    If(me.HasKeyword(ActorTypeNPC))
-      return me.GetLeveledActorBase().GetSex()
-    else
-      return 3
-    EndIf
-  EndIf
+  return SexLabUtil.GetAPI().GetSex(me)
 endFunction
 
 bool Function IsValidRace(Actor that)
@@ -450,7 +435,7 @@ Actor[] Function GetActors()
     If(subject && JMap.getFlt(jCooldowns, subject.GetFormID() as String) + (MCM.fEngageCooldown / 24) < GameDaysPassed.Value)
       bool accept = false
       bool npc = subject.HasKeyword(ActorTypeNPC)
-      If(!npc && (!MCM.FrameCreature || !IsValidRace(subject)))
+      If(!npc && (!MCM.bSLAllowed || !IsValidRace(subject)))
         ;
       ElseIf(subject.IsInFaction(PlayerFollowerFaction) || subject.IsPlayerTeammate())
         accept = JMap.getInt(jProfile, "bConsiderFollowers")

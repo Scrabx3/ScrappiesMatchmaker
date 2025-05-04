@@ -82,7 +82,6 @@ Function StartScene()
   EndIf
   hook = GetID()
   RegisterForModEvent("HookAnimationEnd_" + hook, "AfterSceneSL")
-  RegisterForModEvent("ostim_end", "AfterSceneOStim")
   scenesPlayed = 1
   If(jActors == 0 || JArray.count(jActors) == 0) ; Empty Array, 1p Scene
     If(SMMAnimation.StartAnimationSingle(MCM, init, hook) == -1)
@@ -116,17 +115,6 @@ int scenesPlayed
 String hook
 
 Event AfterSceneSL(int tid, bool hasPlayer)
-  PostScene()
-EndEvent
-Event AfterSceneOStim(string asEventName, string asStringArg, float afNumArg, form akSender)
-  Actor[] positions = SMMAnimationOStim.GetPositions(afNumArg as int)
-  If(positions.find(init) == -1)
-    return
-  EndIf
-  PostScene()
-EndEvent
-
-Function PostScene()
   If(MCM.iResMaxRounds > 0 && scenesPlayed >= MCM.iResMaxRounds)
     SetStage(5)
     return
@@ -151,7 +139,7 @@ Function PostScene()
     Debug.Trace("[SMM] " + self + " Failed to create 2p+ scene | partners = " + partners)
   EndIf
   SetStage(5)
-EndFunction
+EndEvent
 
 Function CreateNewPartners()
   Actor[] previous = PapyrusUtil.RemoveActor(partners, none)

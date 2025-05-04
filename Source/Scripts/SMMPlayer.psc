@@ -60,15 +60,10 @@ Event OnPlayerLoadGame()
     MCM.bSLAllowed = false
     MCM.bBestiality = false
     MCM.bSupportFilter = false
-  EndIf
-	If(Game.GetModByName("OStim.esp") == 255)
-    MCM.bOStimAllowed = false
-  ElseIf(SMMAnimationOStim.GetVersion() < 26)
-    MCM.bOStimAllowed = false
-    Debug.MessageBox("ScRappies Matchmaker requires OStim API Version 26 or higher. Your Version is: " + SMMAnimationOStim.GetVersion())
-  EndIf
-  If(!MCM.bSLAllowed && !MCM.bOStimAllowed)
-    Debug.MessageBox("ScRappies Matchmaker requires either SexLab Framework or OStim to be installed.")
+    Debug.MessageBox("ScRappies Matchmaker requires SexLab Framework to be installed.")
+    Debug.Trace("[SMM] <Player> SexLab Framework not installed")
+  Else
+     MCM.bSLAllowed = true
   EndIf
 
   ; Reset Cooldowns
