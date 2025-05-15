@@ -255,7 +255,7 @@ Event OnPageReset(string Page)
     AddSliderOptionST("InitMagicka", "$SMM_MagickaThresh", JMap.getInt(jProfile, "rMagickaThresh") * 100, "{0}%", getFlag(aca > 0))
     SetCursorPosition(15)
     AddHeaderOption("")
-    AddSliderOptionST("PlayerInit", "$SMM_PlayerInitiator", JMap.getInt(jProfile, "fPlayerInit"), "{1}%")
+    ; AddSliderOptionST("PlayerInit", "$SMM_PlayerInitiator", JMap.getInt(jProfile, "fPlayerInit"), "{1}%")
     int jTmp = JMap.getObj(jProfile, "bGenderInit")
     int i = 0
     While(i < JArray.count(jTmp))
@@ -320,10 +320,10 @@ Event OnPageReset(string Page)
     AddSliderOptionST("TMaxRounds", "$SMM_TMaxRounds", iResMaxRounds, "{0}")
     AddSliderOptionST("TNextRound", "$SMM_TNextRound", fResNextRoundChance, "{1}%")
     AddSliderOptionST("TAddActor", "$SMM_TAddActor", fAddActorChance, "{1}%")
-    AddHeaderOption("$SMM_PlayerThread")
-    AddSliderOptionST("TStalkTime", "$SMM_TStalkTime", iStalkTime, "{0}s")
-    AddToggleOptionST("TStalkNotify", "$SMM_TStalkNotify", bStalkNotify)
-    AddToggleOptionST("TStalkNotifyName", "$SMM_TStalkNotifyName", bStalkNotifyName, getFlag(bStalkNotify))
+    ; AddHeaderOption("$SMM_PlayerThread")
+    ; AddSliderOptionST("TStalkTime", "$SMM_TStalkTime", iStalkTime, "{0}s")
+    ; AddToggleOptionST("TStalkNotify", "$SMM_TStalkNotify", bStalkNotify)
+    ; AddToggleOptionST("TStalkNotifyName", "$SMM_TStalkNotifyName", bStalkNotifyName, getFlag(bStalkNotify))
     
     SetCursorPosition(1)
     AddHeaderOption("$SMM_Spectators")
@@ -361,7 +361,7 @@ Event OnPageReset(string Page)
     While(i < 5)
       AddHeaderOption(classColors[2] + "$SMM_filterNPC_" + i)
       ; Male, Female, Futa, Creature, Fem Creature
-      int n = 0
+      int n = 1 ; NOTE: 1.5.3: Setting to 1 to skip Player 
       While(n < 7)
         ; Player, Follower, Male, Female, Futa, Creature, Fem Creature
         int j = i * 7 + n
@@ -377,7 +377,7 @@ Event OnPageReset(string Page)
     While(i < 5)
       AddHeaderOption(classColors[1] + "$SMM_filterFollower_" + i)
       ; Male, Female, Futa, Creature, Fem Creature
-      int n = 0
+      int n = 1 ; NOTE: 1.5.3: Setting to 1 to skip Player
       While(n < 7)
         ; Player, Follower, Male, Female, Futa, Creature, Fem Creature
         int j = i * 7 + n

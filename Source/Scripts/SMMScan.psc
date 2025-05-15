@@ -144,9 +144,9 @@ EndFunction
 ; =============================  INITIATOR
 ; ===============================================================
 Actor Function GetInitiator(Actor[] them)
-  If(!PlayerRef.HasKeywordString("SMM_ThreadActor") && Utility.RandomFloat(0, 99.9) < JMAp.getFlt(jProfile, "fPlayerInit") && ValidInitiator(PlayerRef))
-    return PlayerRef
-  EndIf
+  ; If(!PlayerRef.HasKeywordString("SMM_ThreadActor") && Utility.RandomFloat(0, 99.9) < JMAp.getFlt(jProfile, "fPlayerInit") && ValidInitiator(PlayerRef))
+  ;   return PlayerRef
+  ; EndIf
   int i = 0 
   While(i < them.Length)
     If(ValidInitiator(them[i]))
