@@ -76,6 +76,7 @@ int Function StartAnimationImpl(SMMMCM MCM, Actor first, Actor[] partners, int a
     String tags = MCM.SLTags[n]
     SexLabThread thread = SL.StartScene(positions, tags, victim, asHook = hook)
     If (thread)
+      thread.SetConsent(asVictim == 0)
       return thread.GetThreadID()
     EndIf
     Debug.Trace("[Kudasai] No Animations found, reducing Array size from size = " + positions.length)
